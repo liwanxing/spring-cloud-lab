@@ -1,11 +1,14 @@
 package com.liwx.labuser.controller;
 
-import com.liwx.labuser.entity.User;
-import com.liwx.labuser.repository.UserRepository;
+import com.liwx.labuser.common.PageResult;
+import com.liwx.labuser.common.Result;
+import com.liwx.labuser.dto.UserCreateDTO;
+import com.liwx.labuser.dto.UserUpdateDTO;
+import com.liwx.labuser.dto.UserVO;
+import com.liwx.labuser.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -13,40 +16,40 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     @GetMapping
-    public List<User> list() {
-        return userRepository.findAll();
+    public Result<PageResult<UserVO>> list(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return Result.success(userService.listUsers(page, size));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getById(@PathVariable Long id) {
-        return userRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public Result<UserVO> getById(@PathVariable Long id) {
+        return Result.success(userService.getById(id));
     }
 
     @PostMapping
-    public User create(@RequestBody User user) {
-        return userRepository.save(user);
+    public Result<UserVO> create(@Valid @RequestBody UserCreateDTO dto) {
+        return Result.success(userService.create(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<User> update(@PathVariable Long id, @RequestBody User user) {
-        if (!userRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        user.setId(id);
-        return ResponseEntity.ok(userRepository.save(user));
+    public Result<UserVO> update(@PathVariable Long id, @Valid @RequestBody UserUpdateDTO dto) {
+        return Result.success(userService.update(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!userRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        userRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+    public Result<Void> delete(@PathVariable Long id) {
+        userService.delete(id);
+        return Result.success(null);
+    }
+
+    @GetMapping("/search")
+    public Result<List<UserVO>> search(
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) Integer status) {
+        return Result.success(userService.search(username, status));
     }
 }
