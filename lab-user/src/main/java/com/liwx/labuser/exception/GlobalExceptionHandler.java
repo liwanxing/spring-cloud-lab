@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.bind.annotation.*;
 import java.util.stream.Collectors;
 
@@ -36,6 +37,13 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
         return Result.error(400, msg);
+    }
+
+    @ExceptionHandler(DuplicateKeyException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Result<Void> handleDuplicateKeyException(DuplicateKeyException e) {
+        log.warn("数据重复: {}", e.getMessage());
+        return Result.error(409, "数据已存在，请勿重复提交");
     }
 
     @ExceptionHandler(Exception.class)
