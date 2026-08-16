@@ -65,10 +65,19 @@ public class UserServiceImpl implements UserService {
                             .eq(User::getUsername, dto.getUsername())
                             .ne(User::getId, id)) > 0,
                     "用户名已存在");
+            user.setUsername(dto.getUsername());
         }
-        BeanUtils.copyProperties(dto, user);
         if (dto.getPassword() != null) {
             user.setPassword(PasswordEncoderUtil.encode(dto.getPassword()));
+        }
+        if (dto.getEmail() != null) {
+            user.setEmail(dto.getEmail());
+        }
+        if (dto.getPhone() != null) {
+            user.setPhone(dto.getPhone());
+        }
+        if (dto.getStatus() != null) {
+            user.setStatus(dto.getStatus());
         }
         userMapper.updateById(user);
         return toVO(user);
