@@ -26,6 +26,7 @@ public class AuthController {
         Assert.notNull(user, "用户名或密码错误");
         Assert.isTrue(PasswordEncoderUtil.matches(dto.getPassword(), user.getPassword()),
                 "用户名或密码错误");
+        Assert.isTrue(user.getStatus() == 1, "账号已被禁用");
 
         StpUtil.login(user.getId());
         return Result.success(StpUtil.getTokenValue());
