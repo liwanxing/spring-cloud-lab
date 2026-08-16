@@ -1,12 +1,15 @@
 package com.liwx.labuser.exception;
 
+import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotPermissionException;
+import cn.dev33.satoken.exception.NotRoleException;
 import com.liwx.labuser.common.Result;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.bind.annotation.*;
 import java.util.stream.Collectors;
 
@@ -19,6 +22,27 @@ public class GlobalExceptionHandler {
     public Result<Void> handleBusinessException(BusinessException e) {
         log.warn("业务异常: {}", e.getMessage());
         return Result.error(e.getCode(), e.getMessage());
+    }
+
+    @ExceptionHandler(NotLoginException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public Result<Void> handleNotLoginException(NotLoginException e) {
+        log.warn("未登录: {}", e.getMessage());
+        return Result.error(401, "未登录或登录已过期");
+    }
+
+    @ExceptionHandler(NotPermissionException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Result<Void> handleNotPermissionException(NotPermissionException e) {
+        log.warn("无权限: {}", e.getMessage());
+        return Result.error(403, "无访问权限");
+    }
+
+    @ExceptionHandler(NotRoleException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Result<Void> handleNotRoleException(NotRoleException e) {
+        log.warn("无角色: {}", e.getMessage());
+        return Result.error(403, "无访问权限");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
