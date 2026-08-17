@@ -11,6 +11,7 @@ services:
       MYSQL_USER: cloudlab
       MYSQL_PASSWORD: cloud123
       TZ: Asia/Shanghai
+      MYSQL_CHARSET: utf8mb4
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
