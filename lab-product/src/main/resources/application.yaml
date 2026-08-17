@@ -1,6 +1,4 @@
 spring:
-  application:
-    name: lab-product
   datasource:
     url: jdbc:mysql://localhost:3307/cloud_mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: cloudlab
