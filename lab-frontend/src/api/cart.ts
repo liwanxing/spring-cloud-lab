@@ -4,4 +4,3 @@ export function addToCart(data: { productId: number; quantity: number }) { retur
 export function updateCartQuantity(id: number, quantity: number) { return request.put(`/cart/${id}`, { quantity }) }
 export function removeFromCart(id: number) { return request.delete(`/cart/${id}`) }
 export function clearCart() { return request.delete('/cart') }
-export function checkout() { return request.post('/orders/checkout') }

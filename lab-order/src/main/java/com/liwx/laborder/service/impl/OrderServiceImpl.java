@@ -33,43 +33,73 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderVO createOrder(Long userId, OrderCreateDTO dto) {
-        // 1. 查询商品信息
-        var productRes = productFeignClient.getProduct(dto.getProductId());
-        Assert.isTrue(productRes.getCode() == 200, "商品不存在");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> product = (Map<String, Object>) productRes.getData();
+        return doCreateOrder(userId, dto.getItems());
+    }
 
-        // 2. 扣减库存
-        var deductRes = productFeignClient.deductStock(dto.getProductId(), dto.getQuantity());
-        Assert.isTrue(deductRes.getCode() == 200, "库存不足");
+    @Override
+    @Transactional
+    public OrderVO createOrderFromCart(Long userId) {
+        List<Cart> cartItems = cartMapper.selectList(
+                new LambdaQueryWrapper<Cart>().eq(Cart::getUserId, userId));
+        Assert.isTrue(!cartItems.isEmpty(), "购物车为空");
 
-        // 3. 计算金额
-        BigDecimal price = new BigDecimal(product.get("price").toString());
-        BigDecimal itemAmount = price.multiply(BigDecimal.valueOf(dto.getQuantity()));
+        // 购物车商品转为统一的下单结构，复用下单内核
+        List<OrderItemCreateDTO> items = cartItems.stream()
+                .map(c -> new OrderItemCreateDTO(c.getProductId(), c.getQuantity()))
+                .toList();
+        OrderVO orderVO = doCreateOrder(userId, items);
 
-        // 4. 创建主订单
+        // 清空购物车
+        cartMapper.delete(new LambdaQueryWrapper<Cart>().eq(Cart::getUserId, userId));
+        return orderVO;
+    }
+
+    /**
+     * 统一下单内核：查商品 -> 建主订单 -> 扣库存 -> 插明细
+     * 立即购买与购物车结算共用此逻辑，天然支持一单多商品
+     */
+    private OrderVO doCreateOrder(Long userId, List<OrderItemCreateDTO> items) {
+        // 1. 查询全部商品并计算金额（先整体校验，无任何副作用）
+        List<OrderItem> orderItems = new ArrayList<>(items.size());
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        for (OrderItemCreateDTO itemDTO : items) {
+            var productRes = productFeignClient.getProduct(itemDTO.getProductId());
+            Assert.isTrue(productRes.getCode() == 200, "商品不存在");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> product = (Map<String, Object>) productRes.getData();
+
+            BigDecimal price = new BigDecimal(product.get("price").toString());
+            BigDecimal itemAmount = price.multiply(BigDecimal.valueOf(itemDTO.getQuantity()));
+            totalAmount = totalAmount.add(itemAmount);
+            orderItems.add(OrderItem.builder()
+                    .productId(itemDTO.getProductId())
+                    .productName((String) product.get("name"))
+                    .productPrice(price)
+                    .quantity(itemDTO.getQuantity())
+                    .itemAmount(itemAmount)
+                    .build());
+        }
+
+        // 2. 创建主订单
         Order order = Order.builder()
                 .orderNo(UUID.randomUUID().toString().replace("-", ""))
                 .userId(userId)
-                .totalAmount(itemAmount)
-                .itemCount(1)
+                .totalAmount(totalAmount)
+                .itemCount(orderItems.size())
                 .status("PENDING")
                 .deleted(0)
                 .build();
         orderMapper.insert(order);
 
-        // 5. 创建订单明细
-        OrderItem item = OrderItem.builder()
-                .orderId(order.getId())
-                .productId(dto.getProductId())
-                .productName((String) product.get("name"))
-                .productPrice(price)
-                .quantity(dto.getQuantity())
-                .itemAmount(itemAmount)
-                .build();
-        orderItemMapper.insert(item);
+        // 3. 扣库存 + 创建订单明细
+        for (OrderItem item : orderItems) {
+            var deductRes = productFeignClient.deductStock(item.getProductId(), item.getQuantity());
+            Assert.isTrue(deductRes.getCode() == 200, "「" + item.getProductName() + "」库存不足");
+            item.setOrderId(order.getId());
+            orderItemMapper.insert(item);
+        }
 
-        return toVO(order, List.of(item));
+        return toVO(order, orderItems);
     }
 
     @Override
@@ -129,55 +159,6 @@ public class OrderServiceImpl implements OrderService {
 
         order.setStatus("CANCELLED");
         return toVO(order, items);
-    }
-
-    @Override
-    @Transactional
-    public List<OrderVO> checkoutFromCart(Long userId) {
-        List<Cart> cartItems = cartMapper.selectList(
-                new LambdaQueryWrapper<Cart>().eq(Cart::getUserId, userId));
-        Assert.isTrue(!cartItems.isEmpty(), "购物车为空");
-
-        // 1. 计算总金额
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        for (Cart c : cartItems) {
-            totalAmount = totalAmount.add(c.getProductPrice().multiply(BigDecimal.valueOf(c.getQuantity())));
-        }
-
-        // 2. 创建一个主订单
-        Order order = Order.builder()
-                .orderNo(UUID.randomUUID().toString().replace("-", ""))
-                .userId(userId)
-                .totalAmount(totalAmount)
-                .itemCount(cartItems.size())
-                .status("PENDING")
-                .deleted(0)
-                .build();
-        orderMapper.insert(order);
-
-        // 3. 扣库存 + 创建订单明细
-        List<OrderItem> orderItems = new ArrayList<>();
-        for (Cart cart : cartItems) {
-            var deductRes = productFeignClient.deductStock(cart.getProductId(), cart.getQuantity());
-            Assert.isTrue(deductRes.getCode() == 200, "「" + cart.getProductName() + "」库存不足");
-
-            BigDecimal itemAmount = cart.getProductPrice().multiply(BigDecimal.valueOf(cart.getQuantity()));
-            OrderItem item = OrderItem.builder()
-                    .orderId(order.getId())
-                    .productId(cart.getProductId())
-                    .productName(cart.getProductName())
-                    .productPrice(cart.getProductPrice())
-                    .quantity(cart.getQuantity())
-                    .itemAmount(itemAmount)
-                    .build();
-            orderItemMapper.insert(item);
-            orderItems.add(item);
-        }
-
-        // 4. 清空购物车
-        cartMapper.delete(new LambdaQueryWrapper<Cart>().eq(Cart::getUserId, userId));
-
-        return List.of(toVO(order, orderItems));
     }
 
     private OrderVO toVO(Order order, List<OrderItem> items) {

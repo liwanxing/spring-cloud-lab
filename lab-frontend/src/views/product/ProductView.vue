@@ -94,7 +94,7 @@ function handleOrder(row: any) {
 
 async function submitOrder() {
   try {
-    await createOrder({ productId: orderProduct.value.id, quantity: orderQuantity.value })
+    await createOrder({ items: [{ productId: orderProduct.value.id, quantity: orderQuantity.value }] })
     ElMessage.success('下单成功')
     orderDialogVisible.value = false
     loadData()

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getCartList, updateCartQuantity, removeFromCart, clearCart, checkout } from '@/api/cart'
+import { getCartList, updateCartQuantity, removeFromCart, clearCart } from '@/api/cart'
+import { createOrderFromCart } from '@/api/order'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const cartItems = ref<any[]>([])
@@ -37,8 +38,8 @@ async function handleClear() {
 async function handleCheckout() {
   if (cartItems.value.length === 0) { ElMessage.warning('购物车为空'); return }
   try {
-    const res: any = await checkout()
-    ElMessage.success('下单成功，共 ' + res.data.length + ' 个订单')
+    const res: any = await createOrderFromCart()
+    ElMessage.success('下单成功，共 ' + res.data.itemCount + ' 件商品')
     loadData()
   } catch (err: any) { ElMessage.error(err.message || '结算失败') }
 }
