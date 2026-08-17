@@ -12,6 +12,7 @@ const router = createRouter({
         { path: 'dashboard', name: 'dashboard', component: () => import('@/views/dashboard/DashboardView.vue'), meta: { title: '首页' } },
         { path: 'users', name: 'users', component: () => import('@/views/home/HomeView.vue'), meta: { title: '用户管理' } },
         { path: 'products', name: 'products', component: () => import('@/views/product/ProductView.vue'), meta: { title: '商品管理' } },
+        { path: 'orders', name: 'orders', component: () => import('@/views/order/OrderView.vue'), meta: { title: '订单管理' } },
       ],
     },
   ],

@@ -71,16 +71,16 @@ mvn spring-boot:run
 
 ```bash
 # 分页查询用户
-GET http://localhost:8080/api/users?page=1&size=10
+GET http://localhost:8083/api/users?page=1&size=10
 
 # 查询单个用户
-GET http://localhost:8080/api/users/1
+GET http://localhost:8083/api/users/1
 
 # 模糊搜索（XML方式）
-GET http://localhost:8080/api/users/search?username=admin
+GET http://localhost:8083/api/users/search?username=admin
 
 # 创建用户
-POST http://localhost:8080/api/users
+POST http://localhost:8083/api/users
 {
     "username": "newuser",
     "password": "123456",
@@ -89,14 +89,14 @@ POST http://localhost:8080/api/users
 }
 
 # 更新用户
-PUT http://localhost:8080/api/users/1
+PUT http://localhost:8083/api/users/1
 {
     "username": "updated",
     "email": "updated@example.com"
 }
 
 # 删除用户
-DELETE http://localhost:8080/api/users/1
+DELETE http://localhost:8083/api/users/1
 ```
 
 ### 4. 运行测试

@@ -11,6 +11,11 @@ spring:
     password: cloud123
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  data:
+    redis:
+      host: localhost
+      port: 6380
+
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
@@ -23,10 +28,6 @@ mybatis-plus:
       logic-delete-value: 1
       logic-not-delete-value: 0
 
-  data:
-    redis:
-      host: localhost
-      port: 6380
 
 server:
   port: 8081
@@ -35,3 +36,6 @@ sa-token:
   token-name: Authorization
   timeout: 86400
   active-timeout: 1800
+  redis:
+    host: localhost
+    port: 6380

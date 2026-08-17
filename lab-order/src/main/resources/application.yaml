@@ -10,6 +10,7 @@ spring:
     username: cloudlab
     password: cloud123
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   data:
     redis:
       host: localhost
@@ -34,3 +35,6 @@ sa-token:
   token-name: Authorization
   timeout: 86400
   active-timeout: 1800
+  redis:
+    host: localhost
+    port: 6380
