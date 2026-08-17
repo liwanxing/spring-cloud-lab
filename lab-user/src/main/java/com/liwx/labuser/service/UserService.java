@@ -1,6 +1,6 @@
 package com.liwx.labuser.service;
 
-import com.liwx.labuser.common.PageResult;
+import com.liwx.labcommon.common.PageResult;
 import com.liwx.labuser.dto.UserCreateDTO;
 import com.liwx.labuser.dto.UserUpdateDTO;
 import com.liwx.labuser.dto.UserVO;

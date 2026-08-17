@@ -1,5 +1,5 @@
 package com.liwx.labproduct.service;
-import com.liwx.labproduct.common.PageResult;
+import com.liwx.labcommon.common.PageResult;
 import com.liwx.labproduct.dto.*;
 import java.util.List;
 

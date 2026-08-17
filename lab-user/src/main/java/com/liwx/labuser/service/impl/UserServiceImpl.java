@@ -2,8 +2,8 @@ package com.liwx.labuser.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.liwx.labuser.common.Assert;
-import com.liwx.labuser.common.PageResult;
+import com.liwx.labcommon.common.Assert;
+import com.liwx.labcommon.common.PageResult;
 import com.liwx.labuser.dto.UserCreateDTO;
 import com.liwx.labuser.dto.UserUpdateDTO;
 import com.liwx.labuser.dto.UserVO;

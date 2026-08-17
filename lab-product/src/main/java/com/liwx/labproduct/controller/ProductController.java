@@ -1,6 +1,6 @@
 package com.liwx.labproduct.controller;
-import com.liwx.labproduct.common.PageResult;
-import com.liwx.labproduct.common.Result;
+import com.liwx.labcommon.common.PageResult;
+import com.liwx.labcommon.common.Result;
 import com.liwx.labproduct.dto.*;
 import com.liwx.labproduct.service.ProductService;
 import jakarta.validation.Valid;

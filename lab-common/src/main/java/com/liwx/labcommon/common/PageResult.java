@@ -1,4 +1,4 @@
-package com.liwx.labproduct.common;
+package com.liwx.labcommon.common;
 import lombok.*;
 import java.util.List;
 @Data @NoArgsConstructor @AllArgsConstructor

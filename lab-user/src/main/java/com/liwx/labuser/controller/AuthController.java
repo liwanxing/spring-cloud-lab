@@ -1,8 +1,8 @@
 package com.liwx.labuser.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
-import com.liwx.labuser.common.Assert;
-import com.liwx.labuser.common.Result;
+import com.liwx.labcommon.common.Assert;
+import com.liwx.labcommon.common.Result;
 import com.liwx.labuser.dto.LoginDTO;
 import com.liwx.labuser.entity.User;
 import com.liwx.labuser.service.UserService;

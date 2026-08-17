@@ -1,8 +1,8 @@
 package com.liwx.labproduct.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.liwx.labproduct.common.Assert;
-import com.liwx.labproduct.common.PageResult;
+import com.liwx.labcommon.common.Assert;
+import com.liwx.labcommon.common.PageResult;
 import com.liwx.labproduct.dto.*;
 import com.liwx.labproduct.entity.Product;
 import com.liwx.labproduct.mapper.ProductMapper;

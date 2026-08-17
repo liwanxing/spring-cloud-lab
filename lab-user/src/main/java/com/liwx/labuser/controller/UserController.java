@@ -1,8 +1,8 @@
 package com.liwx.labuser.controller;
 
-import com.liwx.labuser.common.PageResult;
+import com.liwx.labcommon.common.PageResult;
 import cn.dev33.satoken.annotation.SaCheckRole;
-import com.liwx.labuser.common.Result;
+import com.liwx.labcommon.common.Result;
 import com.liwx.labuser.dto.UserCreateDTO;
 import com.liwx.labuser.dto.UserUpdateDTO;
 import com.liwx.labuser.dto.UserVO;

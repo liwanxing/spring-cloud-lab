@@ -11,6 +11,7 @@
     <description>Cloud Mall Lab - Spring Cloud 分布式商城实验室</description>
 
     <modules>
+        <module>lab-common</module>
         <module>lab-user</module>
         <module>lab-product</module>
     </modules>
