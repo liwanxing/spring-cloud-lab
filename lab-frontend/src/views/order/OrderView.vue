@@ -61,13 +61,23 @@ onMounted(() => loadData())
     </el-form>
     <el-divider />
     <el-table :data="tableData" v-loading="loading" stripe>
+      <el-table-column type="expand">
+        <template #default="{ row }">
+          <el-table :data="row.items" style="margin: 8px 40px" size="small" border>
+            <el-table-column prop="productName" label="商品名称" min-width="150" />
+            <el-table-column prop="productPrice" label="单价" width="100">
+              <template #default="{ row: item }">¥{{ item.productPrice }}</template>
+            </el-table-column>
+            <el-table-column prop="quantity" label="数量" width="80" />
+            <el-table-column prop="itemAmount" label="小计" width="100">
+              <template #default="{ row: item }"><span style="color: #f56c6c">¥{{ item.itemAmount }}</span></template>
+            </el-table-column>
+          </el-table>
+        </template>
+      </el-table-column>
       <el-table-column prop="id" label="ID" width="70" />
       <el-table-column prop="orderNo" label="订单号" width="280" show-overflow-tooltip />
-      <el-table-column prop="productName" label="商品名称" min-width="150" />
-      <el-table-column prop="productPrice" label="单价" width="100">
-        <template #default="{ row }">¥{{ row.productPrice }}</template>
-      </el-table-column>
-      <el-table-column prop="quantity" label="数量" width="70" />
+      <el-table-column prop="itemCount" label="商品种类" width="90" />
       <el-table-column prop="totalAmount" label="总金额" width="100">
         <template #default="{ row }">
           <span style="color: #f56c6c; font-weight: bold">¥{{ row.totalAmount }}</span>

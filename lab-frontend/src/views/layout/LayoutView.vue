@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getCurrentUser, logout } from '@/api/auth'
 import { ElMessage } from 'element-plus'
-import { House, User, Goods, List, Fold, Expand, ArrowDown } from '@element-plus/icons-vue'
+import { House, User, Goods, List, ShoppingCart, Fold, Expand, ArrowDown } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -50,6 +50,10 @@ async function handleLogout() {
         <el-menu-item index="/orders">
           <el-icon><List /></el-icon>
           <template #title>订单管理</template>
+        </el-menu-item>
+        <el-menu-item index="/cart">
+          <el-icon><ShoppingCart /></el-icon>
+          <template #title>购物车</template>
         </el-menu-item>
       </el-menu>
     </el-aside>

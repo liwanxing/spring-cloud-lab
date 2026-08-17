@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { getProductList, createProduct, updateProduct, deleteProduct } from '@/api/product'
+import { createOrder } from '@/api/order'
+import { addToCart } from '@/api/cart'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const tableData = ref<any[]>([])
@@ -19,6 +21,10 @@ const rules = {
   stock: [{ required: true, message: '请输入库存', trigger: 'blur' }],
 }
 
+const orderDialogVisible = ref(false)
+const orderProduct = ref<any>({})
+const orderQuantity = ref(1)
+
 async function loadData() {
   loading.value = true
   try {
@@ -34,12 +40,14 @@ function handleReset() { query.name = ''; query.status = undefined; query.page =
 function handleSizeChange() { query.page = 1; loadData() }
 
 function handleCreate() {
+  orderDialogVisible.value = false
   isEdit.value = false; dialogTitle.value = '新增商品'
   Object.assign(form, { id: 0, name: '', description: '', price: 0, stock: 0, category: '', status: 1 })
   dialogVisible.value = true
 }
 
 function handleEdit(row: any) {
+  orderDialogVisible.value = false
   isEdit.value = true; dialogTitle.value = '编辑商品'
   Object.assign(form, { id: row.id, name: row.name, description: row.description || '', price: row.price, stock: row.stock, category: row.category || '', status: row.status })
   dialogVisible.value = true
@@ -55,8 +63,7 @@ async function handleSubmit() {
       if (form.price) data.price = form.price
       if (form.stock !== undefined) data.stock = form.stock
       if (form.category) data.category = form.category
-      await updateProduct(form.id, data)
-      ElMessage.success('更新成功')
+      await updateProduct(form.id, data); ElMessage.success('更新成功')
     } else {
       await createProduct(form); ElMessage.success('创建成功')
     }
@@ -66,9 +73,32 @@ async function handleSubmit() {
 
 async function handleDelete(row: any) {
   try {
-    await ElMessageBox.confirm(`确认删除商品「${row.name}」？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm('确认删除商品？', '提示', { type: 'warning' })
     await deleteProduct(row.id); ElMessage.success('删除成功'); loadData()
   } catch {}
+}
+
+async function handleAddCart(row: any) {
+  try {
+    await addToCart({ productId: row.id, quantity: 1 })
+    ElMessage.success('已加入购物车')
+  } catch (err: any) { ElMessage.error(err.message || '加入失败') }
+}
+
+function handleOrder(row: any) {
+  dialogVisible.value = false
+  orderProduct.value = row
+  orderQuantity.value = 1
+  orderDialogVisible.value = true
+}
+
+async function submitOrder() {
+  try {
+    await createOrder({ productId: orderProduct.value.id, quantity: orderQuantity.value })
+    ElMessage.success('下单成功')
+    orderDialogVisible.value = false
+    loadData()
+  } catch (err: any) { ElMessage.error(err.message || '下单失败') }
 }
 
 async function handleStatusChange(row: any) {
@@ -114,16 +144,19 @@ onMounted(() => loadData())
       </el-table-column>
       <el-table-column prop="createdAt" label="创建时间" width="170" />
       <el-table-column prop="updatedAt" label="更新时间" width="170" />
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column label="操作" width="220" fixed="right">
         <template #default="{ row }">
-          <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+          <el-button v-if="row.status === 1 && row.stock > 0" link type="warning" @click="handleAddCart(row)">加购</el-button>
+          <el-button v-if="row.status === 1 && row.stock > 0" link type="success" @click="handleOrder(row)">下单</el-button>
+          <el-button link @click="handleEdit(row)">编辑</el-button>
+          <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
     <el-pagination v-model:current-page="query.page" v-model:page-size="query.size" :page-sizes="[10, 20, 50]" :total="total" layout="total, sizes, prev, pager, next" @size-change="handleSizeChange" @current-change="loadData" style="margin-top: 16px; justify-content: flex-end" />
     <el-empty v-if="!loading && tableData.length === 0" description="暂无数据" />
   </el-card>
+
   <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
     <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
       <el-form-item label="商品名称" prop="name"><el-input v-model="form.name" placeholder="请输入商品名称" /></el-form-item>
@@ -135,6 +168,26 @@ onMounted(() => loadData())
     <template #footer>
       <el-button @click="dialogVisible = false">取消</el-button>
       <el-button type="primary" @click="handleSubmit">确定</el-button>
+    </template>
+  </el-dialog>
+
+  <el-dialog v-model="orderDialogVisible" title="确认下单" width="420px">
+    <div style="color: #606266; line-height: 2">
+      <div><b>商品：</b>{{ orderProduct.name }}</div>
+      <div><b>单价：</b>¥{{ orderProduct.price }}</div>
+      <div><b>库存：</b>{{ orderProduct.stock }}</div>
+    </div>
+    <div style="margin: 16px 0 0; display: flex; align-items: center">
+      <span style="margin-right: 12px"><b>数量：</b></span>
+      <el-input-number v-model="orderQuantity" :min="1" :max="orderProduct.stock" size="small" />
+    </div>
+    <div style="text-align: right; border-top: 1px solid #eee; padding-top: 16px; margin-top: 16px">
+      <span style="color: #909399">合计：</span>
+      <span style="color: #f56c6c; font-size: 22px; font-weight: bold">¥{{ (orderProduct.price * orderQuantity).toFixed(2) }}</span>
+    </div>
+    <template #footer>
+      <el-button @click="orderDialogVisible = false">取消</el-button>
+      <el-button type="primary" @click="submitOrder">确认下单</el-button>
     </template>
   </el-dialog>
 </template>

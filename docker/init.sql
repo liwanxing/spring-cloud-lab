@@ -4,6 +4,9 @@ SET NAMES utf8mb4;
 -- Cloud Mall Lab - Database Init
 
 -- 先删除旧表（开发阶段使用）
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS cart;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS products;
 
@@ -53,21 +56,44 @@ INSERT INTO products (name, description, price, stock, category, status) VALUES
 ('iPad Air', 'Apple iPad Air M2 256GB', 5499.00, 80, '平板', 1),
 ('Apple Watch S9', 'Apple Watch Series 9 GPS', 2999.00, 120, '手表', 1);
 
--- 订单表
+-- 订单主表（不含商品字段，商品信息在 order_items）
 CREATE TABLE IF NOT EXISTS orders (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     order_no VARCHAR(64) NOT NULL UNIQUE COMMENT '订单号',
     user_id BIGINT NOT NULL COMMENT '用户ID',
-    product_id BIGINT NOT NULL COMMENT '商品ID',
-    product_name VARCHAR(200) NOT NULL COMMENT '商品名称',
-    product_price DECIMAL(10,2) NOT NULL COMMENT '商品单价',
-    quantity INT NOT NULL COMMENT '数量',
-    total_amount DECIMAL(10,2) NOT NULL COMMENT '总金额',
-    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态',
+    total_amount DECIMAL(10,2) NOT NULL COMMENT '订单总金额',
+    item_count INT NOT NULL DEFAULT 1 COMMENT '商品种类数',
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING/PAID/SHIPPED/COMPLETED/CANCELLED',
     deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_user_id (user_id),
     INDEX idx_order_no (order_no),
     INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单主表';
+
+-- 购物车表
+CREATE TABLE IF NOT EXISTS cart (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    product_name VARCHAR(200) NOT NULL,
+    product_price DECIMAL(10,2) NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='购物车表';
+
+-- 订单明细表
+CREATE TABLE IF NOT EXISTS order_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT NOT NULL COMMENT '主订单ID',
+    product_id BIGINT NOT NULL COMMENT '商品ID',
+    product_name VARCHAR(200) NOT NULL COMMENT '商品名称',
+    product_price DECIMAL(10,2) NOT NULL COMMENT '下单时单价',
+    quantity INT NOT NULL COMMENT '数量',
+    item_amount DECIMAL(10,2) NOT NULL COMMENT '小计',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_order_id (order_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单明细表';

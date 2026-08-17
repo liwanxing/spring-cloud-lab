@@ -9,19 +9,16 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@TableName("orders")
-public class Order {
+@TableName("order_items")
+public class OrderItem {
     @TableId(type = IdType.AUTO)
     private Long id;
-    private String orderNo;
-    private Long userId;
-    private BigDecimal totalAmount;
-    private Integer itemCount;
-    private String status;
-    @TableLogic
-    private Integer deleted;
+    private Long orderId;
+    private Long productId;
+    private String productName;
+    private BigDecimal productPrice;
+    private Integer quantity;
+    private BigDecimal itemAmount;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
 }

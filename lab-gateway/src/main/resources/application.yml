@@ -21,6 +21,10 @@ spring:
           uri: lb://lab-product
           predicates:
             - Path=/api/products/**
+        - id: lab-order-cart
+          uri: lb://lab-order
+          predicates:
+            - Path=/api/cart/**
         - id: lab-order
           uri: lb://lab-order
           predicates:
