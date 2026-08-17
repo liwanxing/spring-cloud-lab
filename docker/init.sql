@@ -1,12 +1,14 @@
-ALTER DATABASE cloud_mall CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- 设置客户端字符集，确保中文正确读入
+SET NAMES utf8mb4;
 
 -- Cloud Mall Lab - Database Init
 
 -- 先删除旧表（开发阶段使用）
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS products;
 
 -- 用户表
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE COMMENT '用户名',
     password VARCHAR(100) NOT NULL COMMENT '密码(BCrypt加密)',
@@ -19,7 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_username (username),
     INDEX idx_phone (phone)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 -- 插入测试数据（密码均为 123456 的BCrypt加密）
 INSERT INTO users (username, password, email, phone, status, role) VALUES
@@ -28,7 +30,7 @@ INSERT INTO users (username, password, email, phone, status, role) VALUES
 ('test02', '$2a$10$OtOqMbUDjLV9Blq9x2XwyuzkBwwJZQzJkM2hzLsVxvWQ8SMX8A5Dy', 'test02@cloudlab.com', '13800138002', 1, 'user');
 
 -- 商品表
-CREATE TABLE IF NOT EXISTS products (
+CREATE TABLE products (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(200) NOT NULL COMMENT '商品名称',
     description VARCHAR(1000) COMMENT '商品描述',
@@ -41,7 +43,7 @@ CREATE TABLE IF NOT EXISTS products (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_name (name),
     INDEX idx_category (category)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品表';
 
 -- 商品测试数据
 INSERT INTO products (name, description, price, stock, category, status) VALUES
