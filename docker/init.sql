@@ -52,3 +52,22 @@ INSERT INTO products (name, description, price, stock, category, status) VALUES
 ('AirPods Pro 2', 'Apple AirPods Pro 第二代', 1799.00, 200, '配件', 1),
 ('iPad Air', 'Apple iPad Air M2 256GB', 5499.00, 80, '平板', 1),
 ('Apple Watch S9', 'Apple Watch Series 9 GPS', 2999.00, 120, '手表', 1);
+
+-- 订单表
+CREATE TABLE IF NOT EXISTS orders (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_no VARCHAR(64) NOT NULL UNIQUE COMMENT '订单号',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    product_id BIGINT NOT NULL COMMENT '商品ID',
+    product_name VARCHAR(200) NOT NULL COMMENT '商品名称',
+    product_price DECIMAL(10,2) NOT NULL COMMENT '商品单价',
+    quantity INT NOT NULL COMMENT '数量',
+    total_amount DECIMAL(10,2) NOT NULL COMMENT '总金额',
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态',
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_order_no (order_no),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单表';

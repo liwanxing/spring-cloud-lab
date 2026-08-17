@@ -21,7 +21,7 @@ services:
     container_name: cloud-mall-redis
     restart: always
     ports:
-      - "6379:6379"
+      - "6380:6379"
 
   nacos:
     image: nacos/nacos-server:v2.3.1

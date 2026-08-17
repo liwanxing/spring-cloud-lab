@@ -26,7 +26,7 @@ mybatis-plus:
   data:
     redis:
       host: localhost
-      port: 6379
+      port: 6380
 
 server:
   port: 8081

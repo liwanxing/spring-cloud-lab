@@ -29,7 +29,7 @@ server:
   data:
     redis:
       host: localhost
-      port: 6379
+      port: 6380
 
 # Sa-Token 配置
 sa-token:
