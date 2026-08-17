@@ -18,6 +18,7 @@ public class Order {
     private BigDecimal totalAmount;
     private Integer itemCount;
     private String status;
+    private LocalDateTime paidAt;
     @TableLogic
     private Integer deleted;
     @TableField(fill = FieldFill.INSERT)

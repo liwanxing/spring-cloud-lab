@@ -31,3 +31,10 @@ ALTER TABLE order_items ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 
 -- 5. 验证
 SELECT 'Migration complete. orders table restructured.' AS result;
+
+-- ========= 2026-08-17 支付功能 =========
+-- orders 表增加支付时间字段（存量库执行）
+ALTER TABLE orders ADD COLUMN paid_at DATETIME DEFAULT NULL COMMENT '支付时间' AFTER status;
+
+-- 验证
+DESC orders;

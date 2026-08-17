@@ -10,5 +10,7 @@ public interface OrderService {
     OrderVO createOrderFromCart(Long userId);
     PageResult<OrderVO> listOrders(Long userId, int page, int size, String status);
     OrderVO getOrder(Long userId, Long orderId);
+    /** 支付订单：仅 PENDING 可支付，防重复支付 */
+    OrderVO payOrder(Long userId, Long orderId);
     OrderVO cancelOrder(Long userId, Long orderId);
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { getOrderList, cancelOrder } from '@/api/order'
+import { getOrderList, cancelOrder, payOrder } from '@/api/order'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const tableData = ref<any[]>([])
@@ -29,6 +29,15 @@ async function loadData() {
 function handleSearch() { query.page = 1; loadData() }
 function handleReset() { query.status = undefined; query.page = 1; loadData() }
 function handleSizeChange() { query.page = 1; loadData() }
+
+async function handlePay(row: any) {
+  try {
+    await ElMessageBox.confirm(`确认支付 ¥${row.totalAmount}？`, '模拟支付', { type: 'warning' })
+    await payOrder(row.id)
+    ElMessage.success('支付成功')
+    loadData()
+  } catch (err: any) { if (err?.message) ElMessage.error(err.message || '支付失败') }
+}
 
 async function handleCancel(row: any) {
   try {
@@ -91,10 +100,14 @@ onMounted(() => loadData())
         </template>
       </el-table-column>
       <el-table-column prop="createdAt" label="下单时间" width="170" />
-      <el-table-column label="操作" width="100" fixed="right">
+      <el-table-column prop="paidAt" label="支付时间" width="170">
+        <template #default="{ row }">{{ row.paidAt || '-' }}</template>
+      </el-table-column>
+      <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
+          <el-button v-if="row.status === 'PENDING'" size="small" type="success" @click="handlePay(row)">支付</el-button>
           <el-button v-if="row.status === 'PENDING'" size="small" type="danger" @click="handleCancel(row)">取消</el-button>
-          <span v-else style="color: #999; font-size: 12px">-</span>
+          <span v-if="row.status !== 'PENDING'" style="color: #999; font-size: 12px">-</span>
         </template>
       </el-table-column>
     </el-table>

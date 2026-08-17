@@ -16,6 +16,7 @@ public class OrderVO {
     private BigDecimal totalAmount;
     private Integer itemCount;
     private String status;
+    private LocalDateTime paidAt;
     private List<OrderItemVO> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

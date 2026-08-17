@@ -6,4 +6,10 @@
         SET status = 'CANCELLED', updated_at = NOW()
         WHERE id = #{id} AND user_id = #{userId} AND status = 'PENDING' AND deleted = 0
     </update>
+
+    <update id="payOrder">
+        UPDATE orders
+        SET status = 'PAID', paid_at = NOW(), updated_at = NOW()
+        WHERE id = #{id} AND user_id = #{userId} AND status = 'PENDING' AND deleted = 0
+    </update>
 </mapper>

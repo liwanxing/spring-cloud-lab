@@ -11,3 +11,6 @@ export function createOrderFromCart() {
 export function cancelOrder(id: number) {
   return request.put(`/orders/${id}/cancel`)
 }
+export function payOrder(id: number) {
+  return request.put(`/orders/${id}/pay`)
+}
