@@ -98,3 +98,20 @@ CREATE TABLE IF NOT EXISTS order_items (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_order_id (order_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单明细表';
+
+-- 支付流水表
+CREATE TABLE IF NOT EXISTS payments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    pay_no VARCHAR(64) NOT NULL UNIQUE COMMENT '支付单号（商户侧，传给支付宝的 out_trade_no）',
+    order_id BIGINT NOT NULL COMMENT '订单ID',
+    order_no VARCHAR(64) NOT NULL COMMENT '商户订单号',
+    trade_no VARCHAR(64) DEFAULT NULL COMMENT '支付宝交易号（支付成功后回填）',
+    channel VARCHAR(20) NOT NULL COMMENT '支付渠道: ALIPAY/MOCK',
+    amount DECIMAL(10,2) NOT NULL COMMENT '支付金额',
+    status VARCHAR(20) NOT NULL DEFAULT 'PAYING' COMMENT '状态: PAYING/SUCCESS/FAILED',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_trade_no (trade_no),
+    INDEX idx_order_id (order_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付流水表';

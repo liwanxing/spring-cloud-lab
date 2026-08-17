@@ -1,4 +1,7 @@
 spring:
+  config:
+    # 本地密钥配置（不入版本库，参考 application-local.yml.example）
+    import: optional:classpath:application-local.yml
   application:
     name: lab-order
   cloud:
@@ -38,3 +41,15 @@ sa-token:
   redis:
     host: localhost
     port: 6380
+
+# 支付配置：channel 可选 alipay / mock（未配置时默认 mock）
+# 密钥三项（app-id / merchant-private-key / alipay-public-key）由 application-local.yml 或环境变量提供
+payment:
+  channel: alipay
+  alipay:
+    gateway-url: https://openapi-sandbox.dl.alipaydev.com/gateway.do
+    notify-url: ""
+    return-url: http://localhost:5174/orders
+    app-id: ${ALIPAY_APP_ID:}
+    merchant-private-key: ${ALIPAY_MERCHANT_PRIVATE_KEY:}
+    alipay-public-key: ${ALIPAY_PUBLIC_KEY:}

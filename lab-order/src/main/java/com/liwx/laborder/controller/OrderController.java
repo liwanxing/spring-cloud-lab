@@ -40,12 +40,6 @@ public class OrderController {
         return Result.success(orderService.getOrder(StpUtil.getLoginIdAsLong(), id));
     }
 
-    /** 模拟支付：当前为 Mock 实现，沙箱阶段替换支付渠道 */
-    @PutMapping("/{id}/pay")
-    public Result<OrderVO> payOrder(@PathVariable Long id) {
-        return Result.success(orderService.payOrder(StpUtil.getLoginIdAsLong(), id));
-    }
-
     @PutMapping("/{id}/cancel")
     public Result<OrderVO> cancelOrder(@PathVariable Long id) {
         return Result.success(orderService.cancelOrder(StpUtil.getLoginIdAsLong(), id));

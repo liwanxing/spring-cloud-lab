@@ -28,7 +28,7 @@ spring:
         - id: lab-order
           uri: lb://lab-order
           predicates:
-            - Path=/api/orders/**
+            - Path=/api/orders/**,/api/payments/**
         - id: lab-user-test
           uri: lb://lab-user
           predicates:

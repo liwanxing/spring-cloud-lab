@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { getOrderList, cancelOrder, payOrder } from '@/api/order'
+import { getOrderList, cancelOrder, createPayment, queryPayStatus } from '@/api/order'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const tableData = ref<any[]>([])
@@ -32,11 +32,37 @@ function handleSizeChange() { query.page = 1; loadData() }
 
 async function handlePay(row: any) {
   try {
-    await ElMessageBox.confirm(`确认支付 ¥${row.totalAmount}？`, '模拟支付', { type: 'warning' })
-    await payOrder(row.id)
-    ElMessage.success('支付成功')
-    loadData()
-  } catch (err: any) { if (err?.message) ElMessage.error(err.message || '支付失败') }
+    await ElMessageBox.confirm(`确认支付 ¥${row.totalAmount}？`, '订单支付', { type: 'warning' })
+  } catch { return }
+  try {
+    const res: any = await createPayment(row.id)
+    if (res.data.payUrl) {
+      // 支付宝渠道：新窗口打开收银台，沙箱钱包扫码付款；本地轮询支付结果
+      window.open(res.data.payUrl, '_blank')
+      ElMessage.info('已打开支付宝收银台，请用沙箱钱包扫码付款')
+      pollPayStatus(row.id)
+    } else {
+      // mock 渠道：同步成功
+      ElMessage.success('支付成功')
+      loadData()
+    }
+  } catch (err: any) { ElMessage.error(err.message || '发起支付失败') }
+}
+
+function sleep(ms: number) { return new Promise(resolve => setTimeout(resolve, ms)) }
+
+async function pollPayStatus(orderId: number) {
+  // 每 2 秒查一次，最多 60 次（2 分钟）
+  for (let i = 0; i < 60; i++) {
+    await sleep(2000)
+    try {
+      const res: any = await queryPayStatus(orderId)
+      if (res.data === 'SUCCESS') { ElMessage.success('支付成功'); loadData(); return }
+      if (res.data === 'FAILED') { ElMessage.error('支付失败'); loadData(); return }
+    } catch { /* 单次查询失败忽略，继续轮询 */ }
+  }
+  ElMessage.info('暂未查到支付结果，请稍后刷新订单列表确认')
+  loadData()
 }
 
 async function handleCancel(row: any) {

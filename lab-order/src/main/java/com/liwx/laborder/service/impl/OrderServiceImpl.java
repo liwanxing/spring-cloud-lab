@@ -13,12 +13,10 @@ import com.liwx.laborder.mapper.CartMapper;
 import com.liwx.laborder.mapper.OrderItemMapper;
 import com.liwx.laborder.mapper.OrderMapper;
 import com.liwx.laborder.service.OrderService;
-import com.liwx.laborder.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,7 +29,6 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemMapper orderItemMapper;
     private final CartMapper cartMapper;
     private final ProductFeignClient productFeignClient;
-    private final PaymentService paymentService;
 
     @Override
     @Transactional
@@ -136,29 +133,6 @@ public class OrderServiceImpl implements OrderService {
         Assert.isTrue(order.getUserId().equals(userId), "无权查看");
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, orderId));
-        return toVO(order, items);
-    }
-
-    @Override
-    @Transactional
-    public OrderVO payOrder(Long userId, Long orderId) {
-        Order order = orderMapper.selectById(orderId);
-        Assert.notNull(order, "订单不存在");
-        Assert.isTrue(order.getUserId().equals(userId), "无权操作");
-        Assert.isTrue("PENDING".equals(order.getStatus()), "订单状态不允许支付");
-
-        // 调用支付渠道（当前为 Mock 实现，沙箱阶段替换实现类）
-        boolean paid = paymentService.pay(order.getOrderNo(), order.getTotalAmount());
-        Assert.isTrue(paid, "支付失败");
-
-        // 条件更新防止并发重复支付：仅 PENDING 状态可更新为 PAID
-        int rows = orderMapper.payOrder(orderId, userId);
-        Assert.isTrue(rows > 0, "支付失败，订单状态已变更");
-
-        List<OrderItem> items = orderItemMapper.selectList(
-                new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, orderId));
-        order.setStatus("PAID");
-        order.setPaidAt(LocalDateTime.now());
         return toVO(order, items);
     }
 

@@ -11,3 +11,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# 敏感配置（沙箱/生产密钥，不入版本库）
+**/application-local.yml
