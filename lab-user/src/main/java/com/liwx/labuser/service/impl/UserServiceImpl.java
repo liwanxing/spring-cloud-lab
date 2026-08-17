@@ -23,11 +23,12 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
 
     @Override
-    public PageResult<UserVO> listUsers(int page, int size) {
-        Page<User> userPage = userMapper.selectPage(
-                new Page<>(page, size),
-                new LambdaQueryWrapper<User>().orderByDesc(User::getCreatedAt)
-        );
+    public PageResult<UserVO> listUsers(int page, int size, String username, Integer status) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>()
+                .like(username != null && !username.isBlank(), User::getUsername, username)
+                .eq(status != null, User::getStatus, status)
+                .orderByDesc(User::getCreatedAt);
+        Page<User> userPage = userMapper.selectPage(new Page<>(page, size), wrapper);
         return new PageResult<>(
                 userPage.getRecords().stream().map(this::toVO).toList(),
                 userPage.getTotal(), page, size

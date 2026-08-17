@@ -7,7 +7,7 @@ import com.liwx.labuser.dto.UserVO;
 import java.util.List;
 
 public interface UserService {
-    PageResult<UserVO> listUsers(int page, int size);
+    PageResult<UserVO> listUsers(int page, int size, String username, Integer status);
     UserVO getById(Long id);
     UserVO create(UserCreateDTO dto);
     UserVO update(Long id, UserUpdateDTO dto);

@@ -43,4 +43,13 @@ public class AuthController {
         StpUtil.checkLogin();
         return Result.success(null);
     }
+
+    @GetMapping("/me")
+    public Result<Object> getCurrentUser() {
+        long userId = StpUtil.getLoginIdAsLong();
+        User user = userMapper.selectById(userId);
+        Assert.notNull(user, "用户不存在");
+        user.setPassword(null);
+        return Result.success(user);
+    }
 }

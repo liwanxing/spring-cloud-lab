@@ -21,8 +21,10 @@ public class UserController {
     @GetMapping
     public Result<PageResult<UserVO>> list(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return Result.success(userService.listUsers(page, size));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) Integer status) {
+        return Result.success(userService.listUsers(page, size, username, status));
     }
 
     @GetMapping("/{id}")

@@ -90,7 +90,7 @@ class LabUserApplicationTests {
                     .build();
             userService.create(dto);
         }
-        var result = userService.listUsers(1, 10);
+        var result = userService.listUsers(1, 10, null, null);
         assertEquals(10, result.getRecords().size());
         assertTrue(result.getTotal() >= 15);
     }
