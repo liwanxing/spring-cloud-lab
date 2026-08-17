@@ -4,7 +4,7 @@ import com.liwx.labuser.common.PageResult;
 import com.liwx.labuser.dto.UserCreateDTO;
 import com.liwx.labuser.dto.UserUpdateDTO;
 import com.liwx.labuser.dto.UserVO;
-import java.util.List;
+import com.liwx.labuser.entity.User;
 
 public interface UserService {
     PageResult<UserVO> listUsers(int page, int size, String username, Integer status);
@@ -12,5 +12,8 @@ public interface UserService {
     UserVO create(UserCreateDTO dto);
     UserVO update(Long id, UserUpdateDTO dto);
     void delete(Long id);
-    List<UserVO> search(String username, Integer status);
+
+    User getByUsername(String username);
+
+    User getByIdRaw(Long id);
 }

@@ -3,13 +3,11 @@ package com.liwx.labuser;
 import com.liwx.labuser.dto.UserCreateDTO;
 import com.liwx.labuser.dto.UserVO;
 import com.liwx.labuser.service.UserService;
-import com.liwx.labuser.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,8 +19,6 @@ class LabUserApplicationTests {
     @Autowired
     private UserService userService;
 
-    @Autowired
-    private UserServiceImpl userServiceImpl;
 
     @Test
     @Order(1)
@@ -37,21 +33,6 @@ class LabUserApplicationTests {
         UserVO vo = userService.create(dto);
         assertNotNull(vo.getId());
         assertEquals("testuser", vo.getUsername());
-    }
-
-    @Test
-    @Order(2)
-    @DisplayName("密码加密验证")
-    void testPasswordEncryption() {
-        String rawPassword = "mypassword";
-        String encoded = com.liwx.labuser.util.PasswordEncoderUtil.encode(rawPassword);
-
-        // 密码被加密了，不再是明文
-        assertNotEquals(rawPassword, encoded);
-        // 但验证能通过
-        assertTrue(userServiceImpl.verifyPassword(rawPassword, encoded));
-        // 错误密码验证失败
-        assertFalse(userServiceImpl.verifyPassword("wrongpassword", encoded));
     }
 
     @Test
@@ -108,23 +89,4 @@ class LabUserApplicationTests {
         assertThrows(Exception.class, () -> userService.getById(created.getId()));
     }
 
-    @Test
-    @Order(7)
-    @DisplayName("XML模糊搜索")
-    void testSearchByUsername() {
-        UserCreateDTO dto1 = UserCreateDTO.builder()
-                .username("search_alice")
-                .password("123456")
-                .build();
-        UserCreateDTO dto2 = UserCreateDTO.builder()
-                .username("search_bob")
-                .password("123456")
-                .build();
-        userService.create(dto1);
-        userService.create(dto2);
-
-        List<UserVO> results = userService.search("search", null);
-        assertTrue(results.size() >= 2);
-        assertTrue(results.stream().allMatch(u -> u.getUsername().contains("search")));
-    }
 }

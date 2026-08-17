@@ -80,6 +80,7 @@ public class UserServiceImpl implements UserService {
         if (dto.getStatus() != null) {
             user.setStatus(dto.getStatus());
         }
+        user.setUpdatedAt(null);
         userMapper.updateById(user);
         return toVO(user);
     }
@@ -90,14 +91,16 @@ public class UserServiceImpl implements UserService {
         userMapper.deleteById(id);
     }
 
+
+
     @Override
-    public List<UserVO> search(String username, Integer status) {
-        return userMapper.searchByUsername(username, status)
-                .stream().map(this::toVO).toList();
+    public User getByUsername(String username) {
+        return userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
     }
 
-    public boolean verifyPassword(String rawPassword, String encodedPassword) {
-        return PasswordEncoderUtil.matches(rawPassword, encodedPassword);
+    @Override
+    public User getByIdRaw(Long id) {
+        return userMapper.selectById(id);
     }
 
     private UserVO toVO(User user) {

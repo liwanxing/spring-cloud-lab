@@ -24,6 +24,8 @@ public class User {
 
     private Integer status;
 
+    private String role;
+
     @TableLogic
     private Integer deleted;
 

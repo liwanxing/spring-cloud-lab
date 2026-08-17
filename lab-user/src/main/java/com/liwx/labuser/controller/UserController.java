@@ -1,6 +1,7 @@
 package com.liwx.labuser.controller;
 
 import com.liwx.labuser.common.PageResult;
+import cn.dev33.satoken.annotation.SaCheckRole;
 import com.liwx.labuser.common.Result;
 import com.liwx.labuser.dto.UserCreateDTO;
 import com.liwx.labuser.dto.UserUpdateDTO;
@@ -9,11 +10,11 @@ import com.liwx.labuser.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@SaCheckRole("admin")
 public class UserController {
 
     private final UserService userService;
@@ -48,10 +49,4 @@ public class UserController {
         return Result.success(null);
     }
 
-    @GetMapping("/search")
-    public Result<List<UserVO>> search(
-            @RequestParam(required = false) String username,
-            @RequestParam(required = false) Integer status) {
-        return Result.success(userService.search(username, status));
-    }
 }

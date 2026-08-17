@@ -5,9 +5,8 @@ import com.liwx.labuser.common.Assert;
 import com.liwx.labuser.common.Result;
 import com.liwx.labuser.dto.LoginDTO;
 import com.liwx.labuser.entity.User;
-import com.liwx.labuser.mapper.UserMapper;
+import com.liwx.labuser.service.UserService;
 import com.liwx.labuser.util.PasswordEncoderUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -17,12 +16,11 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final UserMapper userMapper;
+    private final UserService userService;
 
     @PostMapping("/login")
     public Result<String> login(@Valid @RequestBody LoginDTO dto) {
-        User user = userMapper.selectOne(
-                new LambdaQueryWrapper<User>().eq(User::getUsername, dto.getUsername()));
+        User user = userService.getByUsername(dto.getUsername());
         Assert.notNull(user, "用户名或密码错误");
         Assert.isTrue(PasswordEncoderUtil.matches(dto.getPassword(), user.getPassword()),
                 "用户名或密码错误");
@@ -47,7 +45,7 @@ public class AuthController {
     @GetMapping("/me")
     public Result<Object> getCurrentUser() {
         long userId = StpUtil.getLoginIdAsLong();
-        User user = userMapper.selectById(userId);
+        User user = userService.getByIdRaw(userId);
         Assert.notNull(user, "用户不存在");
         user.setPassword(null);
         return Result.success(user);
