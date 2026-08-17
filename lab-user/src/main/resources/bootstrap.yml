@@ -1,7 +1,0 @@
-spring:
-  application:
-    name: lab-user
-  cloud:
-    nacos:
-      discovery:
-        server-addr: localhost:8848

@@ -1,0 +1,27 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: lab-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+      routes:
+        - id: lab-user
+          uri: lb://lab-user
+          predicates:
+            - Path=/api/users/**,/api/auth/**
+        - id: lab-product
+          uri: lb://lab-product
+          predicates:
+            - Path=/api/products/**
+        - id: lab-user-test
+          uri: lb://lab-user
+          predicates:
+            - Path=/api/test/**
