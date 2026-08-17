@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getCurrentUser, logout } from '@/api/auth'
 import { ElMessage } from 'element-plus'
-import { House, User, Fold, Expand, ArrowDown } from '@element-plus/icons-vue'
+import { House, User, Goods, Fold, Expand, ArrowDown } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -42,6 +42,10 @@ async function handleLogout() {
         <el-menu-item index="/users">
           <el-icon><User /></el-icon>
           <template #title>用户管理</template>
+        </el-menu-item>
+        <el-menu-item index="/products">
+          <el-icon><Goods /></el-icon>
+          <template #title>商品管理</template>
         </el-menu-item>
       </el-menu>
     </el-aside>
