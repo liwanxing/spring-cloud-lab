@@ -12,6 +12,7 @@
 - **支付宝沙箱**（alipay-sdk-java：电脑网站支付 + 异步回调 + 轮询查单双保险）
 - **XXL-Job** 2.4.1（订单超时关单）
 - **Seata** 2.0.0（AT 分布式事务：下单跨库扣库存，全局提交/回滚实战验证）
+- **RocketMQ** 5.3.1（延迟消息关单，XXL-Job 扫表退为兑底）
 - 前端：**Vue 3 + TypeScript + Vite + Pinia**
 - **Docker Compose** 基础设施编排
 
@@ -45,6 +46,9 @@
 | cloud-mall-nacos | 8848 | 注册中心（控制台 nacos/nacos） |
 | cloud-xxljob-admin | 8181 | 任务调度中心（admin/123456） |
 | cloud-seata-server | 7091 / 8091 | Seata TC（控制台 seata/seata，8091 客户端通信） |
+| cloud-rmq-namesrv | 19876 | RocketMQ NameServer（默认 9876 被另一项目占用，端口后移） |
+| cloud-rmq-broker | 10913/10915/10916 | RocketMQ Broker（brokerIP1 通告 127.0.0.1，详见 rocketmq/broker.conf 注释） |
+| cloud-rmq-dashboard | 8182 | RocketMQ 控制台（8180/8181 已被占用） |
 
 > xxl_job 库不在 init.sql 内：首次启动前需以 root 手动导入 `docker/tables_xxl_job.sql`。
 
@@ -91,7 +95,7 @@ npm run dev
 
 ## 核心业务链路
 
-登录（Sa-Token）→ 商品 → 购物车 → 下单（Feign 扣库存）→ 支付宝沙箱支付（回调 + 轮询双保险）→ 超时关单（XXL-Job 扫表、渠道关单、库存回补）
+登录（Sa-Token）→ 商品 → 购物车 → 下单（Feign 扣库存 + 发 RocketMQ 延迟关单消息）→ 支付宝沙箱支付（回调 + 轮询双保险）→ 超时关单（MQ 延迟消息到点为主、XXL-Job 扫表兑底；渠道关单 + 库存回补）
 
 > 三库拆分后，跨服务一致性由 Seata AT 保证（undo_log 三库各一张；下单链路已实战验证全局回滚）。
 
@@ -101,5 +105,5 @@ npm run dev
 2. ~~模块拆分：用户 / 商品 / 订单 / 网关 / 前端~~ ✅
 3. ~~进阶组件：Nacos、Gateway、Sa-Token、支付宝沙箱、XXL-Job 超时关单~~ ✅
 4. ~~Seata 分布式事务：下单链路 @GlobalTransactional + undo_log 反向补偿~~ ✅
-5. RocketMQ 延迟消息关单（定时任务退为兜底）
+5. ~~RocketMQ 延迟消息关单（XXL-Job 退为兑底）~~ ✅
 6. Sentinel 限流熔断
