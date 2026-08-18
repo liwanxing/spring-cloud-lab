@@ -4,10 +4,17 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+/**
+ * 支付宝配置集，绑定 application.yaml 的 payment.alipay 前缀。
+ *
+ * 抽取原因：配置有两个消费方（AlipayClientConfig 建客户端、AlipayPaymentServiceImpl 业务用 notifyUrl/公钥验签），
+ * 若用 @Value 则同一个 key 要在两个类里各写一遍，集中绑定为对象后注入同一个 bean 即可。
+ */
 @Data
 @Component
 @ConfigurationProperties(prefix = "payment.alipay")
 public class AlipayProperties {
+
     /** 沙箱 APPID */
     private String appId;
     /** 沙箱网关：https://openapi-sandbox.dl.alipaydev.com/gateway.do */

@@ -8,20 +8,26 @@ import com.liwx.laborder.dto.*;
 import com.liwx.laborder.entity.Order;
 import com.liwx.laborder.entity.OrderItem;
 import com.liwx.laborder.entity.Cart;
+import com.liwx.laborder.entity.Payment;
 import com.liwx.laborder.feign.ProductFeignClient;
 import com.liwx.laborder.mapper.CartMapper;
 import com.liwx.laborder.mapper.OrderItemMapper;
 import com.liwx.laborder.mapper.OrderMapper;
+import com.liwx.laborder.mapper.PaymentMapper;
 import com.liwx.laborder.service.OrderService;
+import com.liwx.laborder.service.PaymentService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.ArrayList;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
@@ -29,6 +35,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemMapper orderItemMapper;
     private final CartMapper cartMapper;
     private final ProductFeignClient productFeignClient;
+    private final PaymentMapper paymentMapper;
+    private final PaymentService paymentService;
 
     @Override
     @Transactional
@@ -149,16 +157,70 @@ public class OrderServiceImpl implements OrderService {
         Assert.isTrue(rows > 0, "取消失败");
 
         // 恢复所有商品库存
+        List<OrderItem> items = restoreStock(orderId);
+
+        order.setStatus("CANCELLED");
+        return toVO(order, items);
+    }
+
+    /**
+     * 超时关单：扫描超时未支付订单，逐笔处理（渠道确认 -> 条件取消 -> 回补库存），
+     * 单笔失败不影响其余订单，渠道侧异常等下一轮任务重试。
+     */
+    @Override
+    public int closeTimeoutOrders(int timeoutMinutes) {
+        List<Order> timeoutOrders = orderMapper.selectList(new LambdaQueryWrapper<Order>()
+                .eq(Order::getStatus, "PENDING")
+                .lt(Order::getCreatedAt, LocalDateTime.now().minusMinutes(timeoutMinutes))
+                .orderByAsc(Order::getId)
+                .last("LIMIT 50"));
+        int closed = 0;
+        for (Order order : timeoutOrders) {
+            try {
+                if (closeOneTimeoutOrder(order)) {
+                    closed++;
+                }
+            } catch (Exception e) {
+                log.error("[超时关单] 订单{} 处理异常，本轮跳过", order.getOrderNo(), e);
+            }
+        }
+        return closed;
+    }
+
+    /** 单笔关单：存在未完成支付流水时先经渠道确认/关闭，再条件取消订单并回补库存 */
+    private boolean closeOneTimeoutOrder(Order order) {
+        Payment payment = paymentMapper.selectOne(new LambdaQueryWrapper<Payment>()
+                .eq(Payment::getOrderId, order.getId())
+                .eq(Payment::getStatus, "PAYING")
+                .orderByDesc(Payment::getId)
+                .last("LIMIT 1"));
+        // 渠道侧已支付（已转支付成功）或渠道交互失败时不可关单，等下一轮
+        if (payment != null && !paymentService.closeTrade(payment)) {
+            return false;
+        }
+        int rows = orderMapper.cancelOrder(order.getId(), order.getUserId());
+        if (rows <= 0) {
+            // 并发下已被支付/取消，无需处理
+            return false;
+        }
+        restoreStock(order.getId());
+        log.info("[超时关单] 订单{} 超时未支付已关闭，库存已回补", order.getOrderNo());
+        return true;
+    }
+
+    /** 回补订单全部商品库存：尽力而为，失败记日志等待后续补偿（与手动取消共用） */
+    private List<OrderItem> restoreStock(Long orderId) {
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, orderId));
         for (OrderItem item : items) {
             try {
                 productFeignClient.deductStock(item.getProductId(), -item.getQuantity());
-            } catch (Exception e) { /* 库存回滚失败需消息队列兜底 */ }
+            } catch (Exception e) {
+                log.error("[库存回补] 失败，等待补偿。productId={} quantity={}",
+                        item.getProductId(), item.getQuantity(), e);
+            }
         }
-
-        order.setStatus("CANCELLED");
-        return toVO(order, items);
+        return items;
     }
 
     private OrderVO toVO(Order order, List<OrderItem> items) {

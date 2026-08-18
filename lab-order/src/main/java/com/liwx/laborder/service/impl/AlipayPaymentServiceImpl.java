@@ -3,10 +3,13 @@ package com.liwx.laborder.service.impl;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.internal.util.AlipaySignature;
+import com.alipay.api.request.AlipayTradeCloseRequest;
 import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
+import com.alipay.api.response.AlipayTradeCloseResponse;
 import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.liwx.labcommon.common.Assert;
 import com.liwx.labcommon.exception.BusinessException;
 import com.liwx.laborder.config.AlipayProperties;
@@ -170,9 +173,52 @@ public class AlipayPaymentServiceImpl implements PaymentService {
         }
     }
 
+    @Override
+    public boolean closeTrade(Payment payment) {
+        // 1. 先查单：关单瞬间用户可能刚好付款，已付则转为支付成功，绝不关已付交易（钱货两失）
+        try {
+            AlipayTradeQueryRequest queryRequest = new AlipayTradeQueryRequest();
+            queryRequest.setBizContent("{\"out_trade_no\":\"" + payment.getPayNo() + "\"}");
+            AlipayTradeQueryResponse queryResponse = alipayClient.execute(queryRequest);
+            if (queryResponse.isSuccess()
+                    && ("TRADE_SUCCESS".equals(queryResponse.getTradeStatus())
+                        || "TRADE_FINISHED".equals(queryResponse.getTradeStatus()))) {
+                completePayment(payment, queryResponse.getTradeNo());
+                log.info("[支付宝] 超时关单查单发现已支付，转为支付成功，支付单号：{}", payment.getPayNo());
+                return false;
+            }
+        } catch (AlipayApiException e) {
+            // 查单失败不关单，等下一轮任务重试（宁可多等一轮，不可错关）
+            log.warn("[支付宝] 超时关单查单失败，本轮跳过，支付单号{}：{}", payment.getPayNo(), e.getErrMsg());
+            return false;
+        }
+
+        // 2. 渠道侧未支付，关闭支付宝交易；交易不存在（用户从未打开收银台）视为已关闭，其余失败跳过等下轮
+        try {
+            AlipayTradeCloseRequest closeRequest = new AlipayTradeCloseRequest();
+            closeRequest.setBizContent("{\"out_trade_no\":\"" + payment.getPayNo() + "\"}");
+            AlipayTradeCloseResponse closeResponse = alipayClient.execute(closeRequest);
+            if (!closeResponse.isSuccess() && !"ACQ.TRADE_NOT_EXIST".equals(closeResponse.getSubCode())) {
+                log.warn("[支付宝] 关闭交易失败，本轮跳过，支付单号{}：{}", payment.getPayNo(), closeResponse.getSubMsg());
+                return false;
+            }
+        } catch (AlipayApiException e) {
+            log.warn("[支付宝] 关闭交易异常，本轮跳过，支付单号{}：{}", payment.getPayNo(), e.getErrMsg());
+            return false;
+        }
+
+        // 3. 本地流水置 CLOSED（幂等条件更新，仅 PAYING 可置）
+        paymentMapper.update(null, new LambdaUpdateWrapper<Payment>()
+                .eq(Payment::getId, payment.getId())
+                .eq(Payment::getStatus, "PAYING")
+                .set(Payment::getStatus, "CLOSED"));
+        log.info("[支付宝] 超时未支付，交易已关闭，支付单号：{}", payment.getPayNo());
+        return true;
+    }
+
     /** 流水置 SUCCESS 并条件更新订单为 PAID，两侧均为幂等条件更新 */
     private void completePayment(Payment payment, String tradeNo) {
-        paymentMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Payment>()
+        paymentMapper.update(null, new LambdaUpdateWrapper<Payment>()
                 .eq(Payment::getId, payment.getId())
                 .eq(Payment::getStatus, "PAYING")
                 .set(Payment::getStatus, "SUCCESS")

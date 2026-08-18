@@ -1,6 +1,7 @@
 package com.liwx.laborder.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.liwx.labcommon.common.Assert;
 import com.liwx.laborder.dto.PaymentVO;
 import com.liwx.laborder.entity.Order;
@@ -69,6 +70,17 @@ public class MockPaymentServiceImpl implements PaymentService {
     @Override
     public boolean handleNotify(Map<String, String> params) {
         // 模拟渠道无回调
+        return true;
+    }
+
+    @Override
+    public boolean closeTrade(Payment payment) {
+        // 模拟渠道无真实交易，直接幂等关闭本地流水
+        paymentMapper.update(null, new LambdaUpdateWrapper<Payment>()
+                .eq(Payment::getId, payment.getId())
+                .eq(Payment::getStatus, "PAYING")
+                .set(Payment::getStatus, "CLOSED"));
+        log.info("[Mock支付] 超时未支付，流水已关闭，支付单号：{}", payment.getPayNo());
         return true;
     }
 

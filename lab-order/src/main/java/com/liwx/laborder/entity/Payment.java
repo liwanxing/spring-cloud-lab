@@ -22,7 +22,7 @@ public class Payment {
     /** 支付渠道：ALIPAY / MOCK */
     private String channel;
     private BigDecimal amount;
-    /** PAYING / SUCCESS / FAILED */
+    /** PAYING / SUCCESS / FAILED / CLOSED（超时关单） */
     private String status;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

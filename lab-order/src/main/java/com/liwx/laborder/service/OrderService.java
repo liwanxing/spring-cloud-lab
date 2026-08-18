@@ -11,4 +11,7 @@ public interface OrderService {
     PageResult<OrderVO> listOrders(Long userId, int page, int size, String status);
     OrderVO getOrder(Long userId, Long orderId);
     OrderVO cancelOrder(Long userId, Long orderId);
+
+    /** 超时关单：关闭创建超过 timeoutMinutes 分钟仍未支付的订单，返回本轮关闭笔数（由 XXL-Job 定时触发） */
+    int closeTimeoutOrders(int timeoutMinutes);
 }

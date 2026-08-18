@@ -1,6 +1,7 @@
 package com.liwx.laborder.service;
 
 import com.liwx.laborder.dto.PaymentVO;
+import com.liwx.laborder.entity.Payment;
 import java.util.Map;
 
 /**
@@ -19,4 +20,10 @@ public interface PaymentService {
 
     /** 处理支付宝异步通知：验签 + 金额校验 + 推进流水与订单状态，返回是否处理成功 */
     boolean handleNotify(Map<String, String> params);
+
+    /**
+     * 超时关单时关闭 PAYING 流水：先向渠道确认未支付（防"刚付款就被关"），
+     * 再关闭渠道交易并置流水 CLOSED。返回 false 表示用户实际已支付（已按支付成功推进）或渠道交互失败，本轮不可关单。
+     */
+    boolean closeTrade(Payment payment);
 }
