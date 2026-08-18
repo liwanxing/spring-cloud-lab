@@ -34,7 +34,9 @@ request.interceptors.response.use(
       userStore.logout()
       router.push('/login')
     }
-    return Promise.reject(error)
+    // 提取后端统一 Result 的 message（限流 429 / 业务错误 400 / 服务不可用 503），没有才退回 axios 默认文案
+    const msg = error.response?.data?.message
+    return Promise.reject(new Error(msg || error.message || '请求失败'))
   }
 )
 

@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.stream.Collectors;
 
 @Slf4j @RestControllerAdvice
@@ -25,6 +26,19 @@ public class GlobalExceptionHandler {
     }
     @ExceptionHandler(DuplicateKeyException.class) @ResponseStatus(HttpStatus.CONFLICT)
     public Result<Void> handleDuplicate(DuplicateKeyException e) { return Result.error(409, "数据已存在"); }
-    @ExceptionHandler(Exception.class) @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public Result<Void> handleException(Exception e) { log.error("系统异常", e); return Result.error("系统内部错误"); }
+    /**
+     * 兑底分支。注：Seata 2.0 会把 @GlobalTransactional 内抛出的异常包一层
+     * RuntimeException("try to proceed invocation error")，BusinessException 类型丢失后落到这里；
+     * 解包还原 400 语义（只影响响应形态，全局回滚不受影响）。
+     */
+    @ExceptionHandler(Exception.class)
+    public Result<Void> handleException(Exception e, HttpServletResponse response) {
+        if (e.getCause() instanceof BusinessException be) {
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            return Result.error(be.getCode(), be.getMessage());
+        }
+        log.error("系统异常", e);
+        response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+        return Result.error("系统内部错误");
+    }
 }

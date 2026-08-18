@@ -13,6 +13,7 @@
 - **XXL-Job** 2.4.1（订单超时关单）
 - **Seata** 2.0.0（AT 分布式事务：下单跨库扣库存，全局提交/回滚实战验证）
 - **RocketMQ** 5.3.1（延迟消息关单，XXL-Job 扫表退为兑底）
+- **Sentinel** 1.8.6（QPS 限流 + Feign 熔断降级，限流 429 与降级兑底实战验证）
 - 前端：**Vue 3 + TypeScript + Vite + Pinia**
 - **Docker Compose** 基础设施编排
 
@@ -49,6 +50,7 @@
 | cloud-rmq-namesrv | 19876 | RocketMQ NameServer（默认 9876 被另一项目占用，端口后移） |
 | cloud-rmq-broker | 10913/10915/10916 | RocketMQ Broker（brokerIP1 通告 127.0.0.1，详见 rocketmq/broker.conf 注释） |
 | cloud-rmq-dashboard | 8182 | RocketMQ 控制台（8180/8181 已被占用） |
+| cloud-sentinel-dashboard | 8858 | Sentinel 控制台（sentinel/sentinel；规则存内存重启失效，生产需 Nacos 持久化） |
 
 > xxl_job 库不在 init.sql 内：首次启动前需以 root 手动导入 `docker/tables_xxl_job.sql`。
 
@@ -106,4 +108,4 @@ npm run dev
 3. ~~进阶组件：Nacos、Gateway、Sa-Token、支付宝沙箱、XXL-Job 超时关单~~ ✅
 4. ~~Seata 分布式事务：下单链路 @GlobalTransactional + undo_log 反向补偿~~ ✅
 5. ~~RocketMQ 延迟消息关单（XXL-Job 退为兑底）~~ ✅
-6. Sentinel 限流熔断
+6. ~~Sentinel 限流熔断（QPS 限流 + Feign 降级兑底）~~ ✅

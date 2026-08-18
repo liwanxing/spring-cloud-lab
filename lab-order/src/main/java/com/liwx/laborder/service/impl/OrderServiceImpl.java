@@ -94,7 +94,9 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (OrderItemCreateDTO itemDTO : items) {
             var productRes = productFeignClient.getProduct(itemDTO.getProductId());
-            Assert.isTrue(productRes.getCode() == 200, "商品不存在");
+            // 503 = Feign 降级（lab-product 不可用/熔断），透传 fallback 提示，与"商品真不存在"区分开
+            Assert.isTrue(productRes.getCode() == 200,
+                    productRes.getCode() == 503 ? productRes.getMessage() : "商品不存在");
             @SuppressWarnings("unchecked")
             Map<String, Object> product = (Map<String, Object>) productRes.getData();
 
@@ -124,7 +126,10 @@ public class OrderServiceImpl implements OrderService {
         // 3. 扣库存 + 创建订单明细
         for (OrderItem item : orderItems) {
             var deductRes = productFeignClient.deductStock(item.getProductId(), item.getQuantity());
-            Assert.isTrue(deductRes.getCode() == 200, "「" + item.getProductName() + "」库存不足");
+            // 同上：降级 503 时透传 fallback 提示，避免误报"库存不足"
+            Assert.isTrue(deductRes.getCode() == 200,
+                    deductRes.getCode() == 503 ? deductRes.getMessage()
+                            : "「" + item.getProductName() + "」库存不足");
             item.setOrderId(order.getId());
             orderItemMapper.insert(item);
         }
