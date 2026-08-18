@@ -49,6 +49,10 @@ public class OrderServiceImpl implements OrderService {
     @Value("${order.close-delay-level:5}")
     private int closeDelayLevel;
 
+    /** 回补对账缓冲期（分钟）：刚取消的单可能正常路径正在回补中，过缓冲期仍是悬挂账才动手，防撞车双回补 */
+    @Value("${order.restore-reconcile-grace-minutes:2}")
+    private int restoreReconcileGraceMinutes;
+
     /**
      * 全局事务发起方（TM）：@GlobalTransactional 开启跨服务事务，XID 随 Feign 传给 lab-product；
      * 任一环节异常（如第二件商品扣减失败）时 TC 指挥各库 undo_log 逆向补偿，库存自动弹回。
@@ -201,12 +205,16 @@ public class OrderServiceImpl implements OrderService {
         int rows = orderMapper.cancelOrder(orderId, userId);
         Assert.isTrue(rows > 0, "取消失败");
 
-        // 恢复所有商品库存
+        // 恢复所有商品库存：全部成功则销账（stock_restored 0->1）；
+        // 有失败项则留悬挂账（0），由对账任务 StockRestoreReconcileJob 等服务恢复后重试回补
         boolean restored = restoreStock(orderId);
+        if (restored) {
+            orderMapper.claimStockRestore(orderId);
+        }
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, orderId));
         if (!restored) {
-            log.warn("[手动取消] 订单{} 库存回补存在失败项，待补偿", orderId);
+            log.warn("[手动取消] 订单{} 库存回补失败，已挂账等对账任务补偿", orderId);
         }
 
         order.setStatus("CANCELLED");
@@ -254,11 +262,13 @@ public class OrderServiceImpl implements OrderService {
             // 并发下已被支付/取消，无需处理
             return false;
         }
+        // 全部回补成功则销账；失败项留悬挂账，由对账任务重试回补
         boolean restored = restoreStock(order.getId());
         if (restored) {
+            orderMapper.claimStockRestore(order.getId());
             log.info("[超时关单] 订单{} 超时未支付已关闭，库存已回补", order.getOrderNo());
         } else {
-            log.warn("[超时关单] 订单{} 超时未支付已关闭，但库存回补存在失败项，待补偿", order.getOrderNo());
+            log.warn("[超时关单] 订单{} 超时未支付已关闭，库存回补失败已挂账，等对账任务补偿", order.getOrderNo());
         }
         return true;
     }
@@ -274,8 +284,43 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
+     * 库存回补对账（悬挂账清理）：取消订单时若 lab-product 恰好不可用（降级 503），回补失败留下
+     * "已取消但库存未回补"的悬挂账（stock_restored=0）。本方法扫出这类单，抢占销账后重试回补。
+     *
+     * 防双回补三道闸（回补加库存不幂等，双回补=库存虚增=可超卖）：
+     * 1) 缓冲期：刚取消的单可能正常路径正在回补中（MQ 关单/手动取消），过缓冲期仍是 0 才算真悬挂；
+     * 2) CAS 抢占：claimStockRestore 条件更新 0->1，抢到回补权才动手；
+     * 3) 失败退账：抢占后仍补不动则释放（1->0），下一轮重来。
+     * 已知限制：整单重试不区分明细 —— 若回补到一半服务再挂，重试会重复回补已成功的明细；
+     * 生产做法是明细级幂等键（或 restore 接口按 orderId 去重），本仓库从简。
+     */
+    @Override
+    public int reconcileStockRestores() {
+        List<Order> pending = orderMapper.selectList(new LambdaQueryWrapper<Order>()
+                .eq(Order::getStatus, "CANCELLED")
+                .eq(Order::getStockRestored, 0)
+                .lt(Order::getUpdatedAt, LocalDateTime.now().minusMinutes(restoreReconcileGraceMinutes))
+                .orderByAsc(Order::getId)
+                .last("LIMIT 50"));
+        int settled = 0;
+        for (Order order : pending) {
+            if (orderMapper.claimStockRestore(order.getId()) == 0) {
+                continue;   // 并发已被其他线程/实例抢走
+            }
+            if (restoreStock(order.getId())) {
+                settled++;
+                log.info("[回补对账] 订单{} 悬挂账已销账，库存回补完成", order.getOrderNo());
+            } else {
+                orderMapper.releaseStockRestoreClaim(order.getId());
+                log.warn("[回补对账] 订单{} 回补仍失败，已退账等下一轮", order.getOrderNo());
+            }
+        }
+        return settled;
+    }
+
+    /**
      * 回补订单全部商品库存（走 lab-product 专属 restore 接口，正数加回）：
-     * 尽力而为，单项失败（异常或降级 503）记错误日志待补偿，返回是否全部成功（与手动取消/超时关单共用）。
+     * 尽力而为，单项失败（异常或降级 503）记错误日志待补偿，返回是否全部成功（手动取消/超时关单/回补对账三处共用）。
      * 注：Feign 开 Sentinel 降级后异常被 fallback 吞掉只返回 503 Result，必须校验返回码，
      * 否则降级会被误报成"已回补"（又一层日志说谎风险）。
      */

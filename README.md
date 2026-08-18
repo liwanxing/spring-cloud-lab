@@ -55,6 +55,8 @@
 > xxl_job 库不在 init.sql 内：首次启动前需以 root 手动导入 `docker/tables_xxl_job.sql`。
 >
 > Sentinel 规则编辑入口二选一：dashboard（8858）有图形化表单但不持久（写客户端内存，重启即丢）；Nacos（8848）持久化正本但只有 JSON 文本编辑。嫌 Nacos 手改 JSON 麻烦的常见做法：把规则写在 `docker/push_sentinel_rules.ps1` 里跑一遍，由脚本推到 Nacos（发布即生效）；也有些公司魔改 dashboard 源码让其直写 Nacos，本仓库不引入。
+>
+> 脚本推规则的原理：脚本只是调 Nacos 的开放 HTTP 接口（POST /nacos/v1/cs/configs，带 dataId/group/content 参数，规则 JSON 无非是一条普通配置）；服务侧 sentinel-datasource-nacos 按 dataId 长轮询监听，一有新发布就把 JSON 解析成流控/熔断规则加载进内存 —— 推的一端是"写配置"，听的一端是"配置变规则"。
 
 ## 数据库账号
 
@@ -99,7 +101,7 @@ npm run dev
 
 ## 核心业务链路
 
-登录（Sa-Token）→ 商品 → 购物车 → 下单（Feign 扣库存 + 发 RocketMQ 延迟关单消息）→ 支付宝沙箱支付（回调 + 轮询双保险）→ 超时关单（MQ 延迟消息到点为主、XXL-Job 扫表兜底；渠道关单 + 库存回补）
+登录（Sa-Token）→ 商品 → 购物车 → 下单（Feign 扣库存 + 发 RocketMQ 延迟关单消息）→ 支付宝沙箱支付（回调 + 轮询双保险）→ 超时关单（MQ 延迟消息到点为主、XXL-Job 扫表兜底；渠道关单 + 库存回补，回补失败留悬挂账由对账任务重试）
 
 > 三库拆分后，跨服务一致性由 Seata AT 保证（undo_log 三库各一张；下单链路已实战验证全局回滚）。
 

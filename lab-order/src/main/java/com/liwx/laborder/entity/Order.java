@@ -19,6 +19,8 @@ public class Order {
     private Integer itemCount;
     private String status;
     private LocalDateTime paidAt;
+    /** 取消单库存回补状态：0=未回补（悬挂账，等对账任务补），1=已回补；非取消单恒 0 无意义 */
+    private Integer stockRestored;
     @TableLogic
     private Integer deleted;
     @TableField(fill = FieldFill.INSERT)
