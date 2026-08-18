@@ -57,6 +57,19 @@ services:
     volumes:
       - xxljob_logs:/data/applogs
 
+  # Seata TC 事务协调器：AT 模式全局事务的大脑（发起方只写 @GlobalTransactional，XID 随 Feign 流转）
+  # 控制台 http://localhost:7091（seata/seata）；8091 是客户端通信端口
+  # 注：file 模式单机存储，重启丢全局事务状态，适合本地实验；生产换 db/redis 模式
+  seata-server:
+    image: seataio/seata-server:2.0.0
+    container_name: cloud-seata-server
+    restart: always
+    ports:
+      - "8091:8091"
+      - "7091:7091"
+    environment:
+      STORE_MODE: file
+
 volumes:
   mysql_data:
   xxljob_logs:

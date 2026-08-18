@@ -115,3 +115,16 @@ CREATE TABLE IF NOT EXISTS payments (
     INDEX idx_order_id (order_id),
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付流水表';
+
+-- Seata AT模式回滚日志表（每个参与全局事务的业务库一张，三个服务共用 cloud_mall 故仅建一张）
+-- Seata 数据源代理自动写入前后镜像，全局回滚时据此逆向补偿，提交后自动清理
+CREATE TABLE IF NOT EXISTS undo_log (
+    branch_id     BIGINT       NOT NULL COMMENT '分支事务ID',
+    xid           VARCHAR(128) NOT NULL COMMENT '全局事务ID',
+    context       VARCHAR(128) NOT NULL COMMENT '上下文（序列化方式等）',
+    rollback_info LONGBLOB     NOT NULL COMMENT '回滚镜像（修改前后的数据快照）',
+    log_status    INT          NOT NULL COMMENT '状态：0正常 1全局已完成（防回滚竞态）',
+    log_created   DATETIME(6)  NOT NULL COMMENT '创建时间',
+    log_modified  DATETIME(6)  NOT NULL COMMENT '修改时间',
+    UNIQUE KEY ux_undo_log (xid, branch_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Seata AT模式回滚日志表';
