@@ -11,6 +11,21 @@ spring:
       eager: true
       transport:
         dashboard: localhost:8858
+      # 规则持久化：正本存 Nacos 配置中心（dataId 按服务名区分），启动拉取 + 监听变更秒生效；
+      # dashboard 降为观察窗（它改的规则只进内存，重启即丢 —— 改规则去 Nacos 控制台改）
+      datasource:
+        flow-rules:
+          nacos:
+            server-addr: localhost:8848
+            group-id: SENTINEL_GROUP
+            data-id: ${spring.application.name}-flow-rules
+            rule-type: flow
+        degrade-rules:
+          nacos:
+            server-addr: localhost:8848
+            group-id: SENTINEL_GROUP
+            data-id: ${spring.application.name}-degrade-rules
+            rule-type: degrade
   datasource:
     # 拆库后各服务独立库+独立账号（账号=库名，最小权限）
     url: jdbc:mysql://localhost:3307/cloud_product?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
