@@ -37,5 +37,26 @@ services:
     depends_on:
       - mysql
 
+  # XXL-Job 调度中心：定时任务统一调度（超时关单等），控制台 http://localhost:8181/xxl-job-admin（admin/123456）
+  # 建表脚本：docker/tables_xxl_job.sql（首次启动前导入 mysql）
+  # 注：宿主机端口用 8181，8180 已被 rocketmq-dashboard 占用
+  xxl-job-admin:
+    image: xuxueli/xxl-job-admin:2.4.1
+    container_name: cloud-xxljob-admin
+    restart: always
+    ports:
+      - "8181:8080"
+    environment:
+      PARAMS: >-
+        --spring.datasource.url=jdbc:mysql://cloud-mall-mysql:3306/xxl_job?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&serverTimezone=Asia/Shanghai
+        --spring.datasource.username=root
+        --spring.datasource.password=root123
+        --xxl.job.accessToken=default_token
+    depends_on:
+      - mysql
+    volumes:
+      - xxljob_logs:/data/applogs
+
 volumes:
   mysql_data:
+  xxljob_logs:
