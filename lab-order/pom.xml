@@ -29,6 +29,14 @@
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-seata</artifactId>
         </dependency>
+        <!-- RocketMQ：延迟消息关单（生产者发延迟消息，消费者到点关单，XXL-Job 退为兑底）
+             注：SCA BOM 未管理此件，需显式定版；2.3.1 是断档版（自带 client 5.1.4 却调 5.2.0 的 API，
+             启动即 NoSuchMethodError），2.3.2 修复并配 client 5.3 系，与 broker 5.3.1 同代 -->
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-spring-boot-starter</artifactId>
+            <version>2.3.2</version>
+        </dependency>
     </dependencies>
     <build><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin></plugins></build>
 </project>

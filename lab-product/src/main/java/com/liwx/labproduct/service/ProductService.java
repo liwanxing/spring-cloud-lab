@@ -10,4 +10,7 @@ public interface ProductService {
     ProductVO update(Long id, ProductUpdateDTO dto);
     void delete(Long id);
     ProductVO deductStock(Long id, int quantity);
+
+    /** 回补库存：取消/超时关单时加回，quantity 必须为正 */
+    ProductVO restoreStock(Long id, int quantity);
 }

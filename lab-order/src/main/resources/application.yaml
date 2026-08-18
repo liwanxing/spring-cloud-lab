@@ -69,6 +69,15 @@ xxl:
 # 超时关单：PENDING 超过该分钟数未支付则自动关闭，控制台任务参数可临时覆盖
 order:
   pay-timeout-minutes: 15
+  # 延迟消息档位（RocketMQ 经典 18 档：5=1m 14=10m 16=30m）：实验用 5 即 1 分钟到点，生产换 16
+  close-delay-level: 5
+
+# RocketMQ：宿主 19876（默认 9876 被另一项目占用）；生产者下单发延迟消息，消费者到点关单
+rocketmq:
+  name-server: 127.0.0.1:19876
+  producer:
+    group: lab-order-producer
+    send-message-timeout: 5000
 
 # 支付配置：channel 可选 alipay / mock（未配置时默认 mock）
 # 密钥三项（app-id / merchant-private-key / alipay-public-key）由 application-local.yml 或环境变量提供

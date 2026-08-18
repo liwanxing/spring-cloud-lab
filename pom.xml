@@ -33,6 +33,9 @@
         <alipay-sdk.version>4.40.961.ALL</alipay-sdk.version>
         <xxl-job.version>2.4.1</xxl-job.version>
         <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
+        <!-- SCA 2023.0.1.0 把 rocketmq-client/acl 管到 5.1.4，而 rocketmq-spring 2.3.2 需要 5.3.1
+             （其容器代码调用 client 5.2+ 的 setNamespaceV2，5.1.4 启动即 NoSuchMethodError），故显式钉回 -->
+        <rocketmq-client.version>5.3.1</rocketmq-client.version>
     </properties>
 
     <dependencyManagement>
@@ -75,6 +78,18 @@
                 <version>${spring-cloud-alibaba.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- 压过 SCA BOM 的 rocketmq 5.1.4（直按条目优先于 BOM 导入），与 broker 5.3.1 同代
+                 remoting/common/srvutil 无需钉：它们随 client/acl 的自身 pom 传递为 5.3.1 -->
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>rocketmq-client</artifactId>
+                <version>${rocketmq-client.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>rocketmq-acl</artifactId>
+                <version>${rocketmq-client.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

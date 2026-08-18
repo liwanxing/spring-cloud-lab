@@ -66,8 +66,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     /**
-     * 业务语义：库存的"扣"与"还"都走这一个口——下单传正数扣减（下单即扣，支付环节不碰库存），
-     * 取消/超时关单回补时传负数加回。
+     * 业务语义：下单即扣（支付环节不碰库存）；取消/超时关单的回补走专属 restoreStock 接口。
      * 分支事务（RM）：无需任何 Seata 注解，收到 XID 后本地提交时自动注册分支并写 undo_log。
      */
     @Override
@@ -75,6 +74,18 @@ public class ProductServiceImpl implements ProductService {
     public ProductVO deductStock(Long id, int quantity) {
         Assert.isTrue(quantity > 0, "扣减数量必须大于0");
         Assert.isTrue(productMapper.deductStock(id, quantity) > 0, "库存不足");
+        return getById(id);
+    }
+
+    /**
+     * 回补库存：取消/超时关单加回（正数语义）。历史上用"负数扣减"魔法回补，
+     * 被 quantity>0 参数校验拒绝（Feign 400），改为专属接口才是正路。
+     */
+    @Override
+    @Transactional
+    public ProductVO restoreStock(Long id, int quantity) {
+        Assert.isTrue(quantity > 0, "回补数量必须大于0");
+        Assert.isTrue(productMapper.restoreStock(id, quantity) > 0, "商品不存在");
         return getById(id);
     }
 

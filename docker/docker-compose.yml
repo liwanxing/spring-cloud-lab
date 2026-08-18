@@ -68,6 +68,49 @@ services:
     environment:
       STORE_MODE: file
 
+  # RocketMQ NameServer：路由中心（broker 向它注册，客户端从它查路由）
+  # 宿主 19876（默认 9876 被另一项目占用，端口整体后移）
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.3.1
+    container_name: cloud-rmq-namesrv
+    restart: always
+    ports:
+      - "19876:9876"
+    environment:
+      TZ: Asia/Shanghai
+    command: sh mqnamesrv
+
+  # RocketMQ Broker：消息存储与转发，延迟消息关单的消息引擎
+  # broker 把 brokerIP1:listenPort 通告给 NameServer，客户端按此直连 —— 端口必须容器内外 1:1 映射
+  rocketmq-broker:
+    image: apache/rocketmq:5.3.1
+    container_name: cloud-rmq-broker
+    restart: always
+    ports:
+      - "10913:10913"   # VIP 通道（listenPort-2）
+      - "10915:10915"   # 主通信端口（默认 10911 被另一项目占用）
+      - "10916:10916"   # HA 同步口（listenPort+1）
+    volumes:
+      - ./rocketmq/broker.conf:/home/rocketmq/broker.conf
+    environment:
+      TZ: Asia/Shanghai
+    command: sh mqbroker -n rocketmq-namesrv:9876 -c /home/rocketmq/broker.conf
+    depends_on:
+      - rocketmq-namesrv
+
+  # RocketMQ 控制台 http://localhost:8182（8180 被另一项目 dashboard 占用，8181 是本组 xxl-job）
+  rocketmq-dashboard:
+    image: apacherocketmq/rocketmq-dashboard:1.0.0
+    container_name: cloud-rmq-dashboard
+    restart: always
+    ports:
+      - "8182:8080"
+    environment:
+      TZ: Asia/Shanghai
+      JAVA_OPTS: "-Drocketmq.namesrv.addr=rocketmq-namesrv:9876"
+    depends_on:
+      - rocketmq-namesrv
+
 volumes:
   mysql_data:
   xxljob_logs:

@@ -6,4 +6,11 @@
         SET stock = stock - #{quantity}, updated_at = NOW()
         WHERE id = #{id} AND stock >= #{quantity} AND deleted = 0
     </update>
+
+    <!-- 回补库存：取消/超时关单加回（正数语义，替代历史上的负数扣减魔法——负数被参数校验拒绝） -->
+    <update id="restoreStock">
+        UPDATE products
+        SET stock = stock + #{quantity}, updated_at = NOW()
+        WHERE id = #{id} AND deleted = 0
+    </update>
 </mapper>

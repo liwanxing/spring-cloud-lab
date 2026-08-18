@@ -45,4 +45,10 @@ public class ProductController {
     public Result<ProductVO> deductStock(@PathVariable Long id, @RequestParam int quantity) {
         return Result.success(productService.deductStock(id, quantity));
     }
+
+    /** 回补库存：取消/超时关单加回，与 deduct 对称的专属接口 */
+    @PutMapping("/{id}/restore")
+    public Result<ProductVO> restoreStock(@PathVariable Long id, @RequestParam int quantity) {
+        return Result.success(productService.restoreStock(id, quantity));
+    }
 }

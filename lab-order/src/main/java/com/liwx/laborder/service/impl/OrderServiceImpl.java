@@ -14,12 +14,16 @@ import com.liwx.laborder.mapper.CartMapper;
 import com.liwx.laborder.mapper.OrderItemMapper;
 import com.liwx.laborder.mapper.OrderMapper;
 import com.liwx.laborder.mapper.PaymentMapper;
+import com.liwx.laborder.mq.MqTopics;
 import com.liwx.laborder.service.OrderService;
 import com.liwx.laborder.service.PaymentService;
 import io.seata.spring.annotation.GlobalTransactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -38,6 +42,11 @@ public class OrderServiceImpl implements OrderService {
     private final ProductFeignClient productFeignClient;
     private final PaymentMapper paymentMapper;
     private final PaymentService paymentService;
+    private final RocketMQTemplate rocketMQTemplate;
+
+    /** 延迟关单档位（RocketMQ 经典 18 档：5=1m 14=10m 16=30m），实验用 1 分钟 */
+    @Value("${order.close-delay-level:5}")
+    private int closeDelayLevel;
 
     /**
      * 全局事务发起方（TM）：@GlobalTransactional 开启跨服务事务，XID 随 Feign 传给 lab-product；
@@ -120,6 +129,17 @@ public class OrderServiceImpl implements OrderService {
             orderItemMapper.insert(item);
         }
 
+        // 4. 发延迟关单消息：到点后消费者检查该单，仍 PENDING 才关（双入口共用内核，天然全覆盖）
+        // 注：消息在全局事务内先飞出，若全局回滚则订单不存在，消费者空跳忽略；
+        // 发送失败仅记日志不影响下单成功 —— 关单另有 XXL-Job 扫表兑底
+        try {
+            rocketMQTemplate.syncSend(MqTopics.ORDER_CLOSE,
+                    MessageBuilder.withPayload(String.valueOf(order.getId())).build(),
+                    3000, closeDelayLevel);
+        } catch (Exception e) {
+            log.error("[延迟关单] 订单{} 消息发送失败，等待扫表兑底", order.getId(), e);
+        }
+
         return toVO(order, orderItems);
     }
 
@@ -170,14 +190,20 @@ public class OrderServiceImpl implements OrderService {
         Assert.isTrue(rows > 0, "取消失败");
 
         // 恢复所有商品库存
-        List<OrderItem> items = restoreStock(orderId);
+        boolean restored = restoreStock(orderId);
+        List<OrderItem> items = orderItemMapper.selectList(
+                new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, orderId));
+        if (!restored) {
+            log.warn("[手动取消] 订单{} 库存回补存在失败项，待补偿", orderId);
+        }
 
         order.setStatus("CANCELLED");
         return toVO(order, items);
     }
 
     /**
-     * 超时关单：扫描超时未支付订单，逐笔处理（渠道确认 -> 条件取消 -> 回补库存），
+     * 超时关单兑底扫表：正常路径由 MQ 延迟消息到点关单，本任务兑住消息丢失/发送失败的单。
+     * 扫描超时未支付订单，逐笔处理（渠道确认 -> 条件取消 -> 回补库存），
      * 单笔失败不影响其余订单，渠道侧异常等下一轮任务重试。
      */
     @Override
@@ -216,24 +242,44 @@ public class OrderServiceImpl implements OrderService {
             // 并发下已被支付/取消，无需处理
             return false;
         }
-        restoreStock(order.getId());
-        log.info("[超时关单] 订单{} 超时未支付已关闭，库存已回补", order.getOrderNo());
+        boolean restored = restoreStock(order.getId());
+        if (restored) {
+            log.info("[超时关单] 订单{} 超时未支付已关闭，库存已回补", order.getOrderNo());
+        } else {
+            log.warn("[超时关单] 订单{} 超时未支付已关闭，但库存回补存在失败项，待补偿", order.getOrderNo());
+        }
         return true;
     }
 
-    /** 回补订单全部商品库存：尽力而为，失败记日志等待后续补偿（与手动取消共用） */
-    private List<OrderItem> restoreStock(Long orderId) {
+    /** 延迟消息到点检查：仍为 PENDING 才关（复用单笔关单内核），返回是否实际关闭 */
+    @Override
+    public boolean closeOrderIfPending(Long orderId) {
+        Order order = orderMapper.selectById(orderId);
+        if (order == null || !"PENDING".equals(order.getStatus())) {
+            return false;   // 不存在（全局回滚）/已支付/已关，消息空跳
+        }
+        return closeOneTimeoutOrder(order);
+    }
+
+    /**
+     * 回补订单全部商品库存（走 lab-product 专属 restore 接口，正数加回）：
+     * 尽力而为，单项失败记错误日志待补偿，返回是否全部成功（与手动取消/超时关单共用）。
+     * 历史：曾用"负数扣减"魔法回补，被对方 quantity>0 校验拒（Feign 400），日志却仍报成功 —— 已改专属接口。
+     */
+    private boolean restoreStock(Long orderId) {
         List<OrderItem> items = orderItemMapper.selectList(
                 new LambdaQueryWrapper<OrderItem>().eq(OrderItem::getOrderId, orderId));
+        boolean allRestored = true;
         for (OrderItem item : items) {
             try {
-                productFeignClient.deductStock(item.getProductId(), -item.getQuantity());
+                productFeignClient.restoreStock(item.getProductId(), item.getQuantity());
             } catch (Exception e) {
+                allRestored = false;
                 log.error("[库存回补] 失败，等待补偿。productId={} quantity={}",
                         item.getProductId(), item.getQuantity(), e);
             }
         }
-        return items;
+        return allRestored;
     }
 
     private OrderVO toVO(Order order, List<OrderItem> items) {
