@@ -7,10 +7,8 @@ services:
       - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: cloud_mall
-      MYSQL_USER: cloudlab
-      MYSQL_PASSWORD: cloud123
       TZ: Asia/Shanghai
+      # 库与账号不再由环境变量初始化：三库三账号（账号=库名）+ cloudlab 观察账号全部由 init.sql 创建
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql

@@ -6,8 +6,9 @@ spring:
       discovery:
         server-addr: localhost:8848
   datasource:
-    url: jdbc:mysql://localhost:3307/cloud_mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
-    username: cloudlab
+    # 拆库后各服务独立库+独立账号（账号=库名，最小权限）
+    url: jdbc:mysql://localhost:3307/cloud_user?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: cloud_user
     password: cloud123
     driver-class-name: com.mysql.cj.jdbc.Driver
 
