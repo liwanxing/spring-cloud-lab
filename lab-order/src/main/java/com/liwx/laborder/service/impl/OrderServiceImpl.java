@@ -263,8 +263,9 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 回补订单全部商品库存（走 lab-product 专属 restore 接口，正数加回）：
-     * 尽力而为，单项失败记错误日志待补偿，返回是否全部成功（与手动取消/超时关单共用）。
-     * 历史：曾用"负数扣减"魔法回补，被对方 quantity>0 校验拒（Feign 400），日志却仍报成功 —— 已改专属接口。
+     * 尽力而为，单项失败（异常或降级 503）记错误日志待补偿，返回是否全部成功（与手动取消/超时关单共用）。
+     * 注：Feign 开 Sentinel 降级后异常被 fallback 吞掉只返回 503 Result，必须校验返回码，
+     * 否则降级会被误报成"已回补"（又一层日志说谎风险）。
      */
     private boolean restoreStock(Long orderId) {
         List<OrderItem> items = orderItemMapper.selectList(
@@ -272,7 +273,12 @@ public class OrderServiceImpl implements OrderService {
         boolean allRestored = true;
         for (OrderItem item : items) {
             try {
-                productFeignClient.restoreStock(item.getProductId(), item.getQuantity());
+                var res = productFeignClient.restoreStock(item.getProductId(), item.getQuantity());
+                if (res == null || res.getCode() != 200) {
+                    allRestored = false;
+                    log.error("[库存回补] 失败（服务降级），等待补偿。productId={} quantity={} res={}",
+                            item.getProductId(), item.getQuantity(), res);
+                }
             } catch (Exception e) {
                 allRestored = false;
                 log.error("[库存回补] 失败，等待补偿。productId={} quantity={}",

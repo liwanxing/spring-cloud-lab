@@ -5,6 +5,12 @@ spring:
     nacos:
       discovery:
         server-addr: localhost:8848
+    # Sentinel 限流熔断（SCA 配置键必须挂 spring.cloud.sentinel 下，写成顶层 sentinel 会被静默无视）：
+    # eager 启动即向控制台注册；默认懒加载需先有流量才连
+    sentinel:
+      eager: true
+      transport:
+        dashboard: localhost:8858
   datasource:
     # 拆库后各服务独立库+独立账号（账号=库名，最小权限）
     url: jdbc:mysql://localhost:3307/cloud_product?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
@@ -38,7 +44,6 @@ seata:
       lab_tx_group: default
     grouplist:
       default: localhost:8091
-
 
 server:
   port: 8081

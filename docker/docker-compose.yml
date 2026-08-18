@@ -111,6 +111,17 @@ services:
     depends_on:
       - rocketmq-namesrv
 
+  # Sentinel 控制台 http://localhost:8858（sentinel/sentinel）：限流/熔断规则可视化下发
+  # 注：客户端接入后需有流量才在控制台出现（懒注册），规则存控制台内存、重启失效（实验可接受，生产走 Nacos 持久化）
+  sentinel-dashboard:
+    image: bladex/sentinel-dashboard:1.8.6
+    container_name: cloud-sentinel-dashboard
+    restart: always
+    ports:
+      - "8858:8858"
+    environment:
+      TZ: Asia/Shanghai
+
 volumes:
   mysql_data:
   xxljob_logs:

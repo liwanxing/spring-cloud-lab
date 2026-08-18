@@ -2,7 +2,8 @@ package com.liwx.laborder.feign;
 import com.liwx.labcommon.common.Result;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
-@FeignClient(name = "lab-product")
+
+@FeignClient(name = "lab-product", fallback = ProductFeignFallback.class)
 public interface ProductFeignClient {
     @GetMapping("/api/products/{id}")
     Result<?> getProduct(@PathVariable("id") Long id);
