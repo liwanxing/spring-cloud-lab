@@ -11,7 +11,7 @@
 - **MySQL** 8.0（三库三账号）/ **Redis** 7
 - **支付宝沙箱**（alipay-sdk-java：电脑网站支付 + 异步回调 + 轮询查单双保险）
 - **XXL-Job** 2.4.1（订单超时关单）
-- **Seata** 2.0.0（AT 分布式事务，TC 已部署，业务接入中）
+- **Seata** 2.0.0（AT 分布式事务：下单跨库扣库存，全局提交/回滚实战验证）
 - 前端：**Vue 3 + TypeScript + Vite + Pinia**
 - **Docker Compose** 基础设施编排
 
@@ -93,13 +93,13 @@ npm run dev
 
 登录（Sa-Token）→ 商品 → 购物车 → 下单（Feign 扣库存）→ 支付宝沙箱支付（回调 + 轮询双保险）→ 超时关单（XXL-Job 扫表、渠道关单、库存回补）
 
-> 三库拆分后，跨服务一致性由 Seata AT 保证（undo_log 三库各一张，业务接入中）。
+> 三库拆分后，跨服务一致性由 Seata AT 保证（undo_log 三库各一张；下单链路已实战验证全局回滚）。
 
 ## 项目规划
 
 1. ~~基础搭建：MySQL + 用户模块 CRUD~~ ✅
 2. ~~模块拆分：用户 / 商品 / 订单 / 网关 / 前端~~ ✅
 3. ~~进阶组件：Nacos、Gateway、Sa-Token、支付宝沙箱、XXL-Job 超时关单~~ ✅
-4. **Seata 分布式事务**（TC 已部署、三库就绪，业务接入中）
+4. ~~Seata 分布式事务：下单链路 @GlobalTransactional + undo_log 反向补偿~~ ✅
 5. RocketMQ 延迟消息关单（定时任务退为兜底）
 6. Sentinel 限流熔断

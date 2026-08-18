@@ -32,6 +32,16 @@ mybatis-plus:
       logic-delete-value: 1
       logic-not-delete-value: 0
 
+# Seata AT 分布式事务：直连 TC（file 模式无注册中心），事务分组 -> TC 集群 -> 地址三层映射
+# 数据源代理默认开启，undo_log 表在 cloud_order 库
+seata:
+  tx-service-group: lab_tx_group
+  service:
+    vgroup-mapping:
+      lab_tx_group: default
+    grouplist:
+      default: localhost:8091
+
 server:
   port: 8082
 

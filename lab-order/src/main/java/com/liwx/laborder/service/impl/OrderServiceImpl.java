@@ -16,6 +16,7 @@ import com.liwx.laborder.mapper.OrderMapper;
 import com.liwx.laborder.mapper.PaymentMapper;
 import com.liwx.laborder.service.OrderService;
 import com.liwx.laborder.service.PaymentService;
+import io.seata.spring.annotation.GlobalTransactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,13 +39,25 @@ public class OrderServiceImpl implements OrderService {
     private final PaymentMapper paymentMapper;
     private final PaymentService paymentService;
 
+    /**
+     * 全局事务发起方（TM）：@GlobalTransactional 开启跨服务事务，XID 随 Feign 传给 lab-product；
+     * 任一环节异常（如第二件商品扣减失败）时 TC 指挥各库 undo_log 逆向补偿，库存自动弹回。
+     * 注解只能挂入口方法：挂私有内核 doCreateOrder 会因 AOP 自调用失效。
+     *
+     * 事务分工（Seata 是兜底的）：本地事务没提交的分支，InnoDB 自己 rollback 擦干净
+     * （连 undo_log 一并回滚，不留记录）；只有已本地提交的分支才留下 undo_log，
+     * 由 Seata 反向补偿。判定只看提交到哪一步，与谁报错无关。
+     */
     @Override
+    @GlobalTransactional(rollbackFor = Exception.class)
     @Transactional
     public OrderVO createOrder(Long userId, OrderCreateDTO dto) {
         return doCreateOrder(userId, dto.getItems());
     }
 
+    /** 同 createOrder：购物车入口的全局事务边界 */
     @Override
+    @GlobalTransactional(rollbackFor = Exception.class)
     @Transactional
     public OrderVO createOrderFromCart(Long userId) {
         List<Cart> cartItems = cartMapper.selectList(

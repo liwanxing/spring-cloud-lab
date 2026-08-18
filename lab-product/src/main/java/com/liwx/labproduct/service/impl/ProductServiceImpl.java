@@ -10,6 +10,7 @@ import com.liwx.labproduct.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service @RequiredArgsConstructor
@@ -64,7 +65,13 @@ public class ProductServiceImpl implements ProductService {
         productMapper.deleteById(id);
     }
 
+    /**
+     * 业务语义：库存的"扣"与"还"都走这一个口——下单传正数扣减（下单即扣，支付环节不碰库存），
+     * 取消/超时关单回补时传负数加回。
+     * 分支事务（RM）：无需任何 Seata 注解，收到 XID 后本地提交时自动注册分支并写 undo_log。
+     */
     @Override
+    @Transactional
     public ProductVO deductStock(Long id, int quantity) {
         Assert.isTrue(quantity > 0, "扣减数量必须大于0");
         Assert.isTrue(productMapper.deductStock(id, quantity) > 0, "库存不足");

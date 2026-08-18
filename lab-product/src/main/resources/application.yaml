@@ -29,6 +29,16 @@ mybatis-plus:
       logic-delete-value: 1
       logic-not-delete-value: 0
 
+# Seata AT 分布式事务：与 lab-order 同组，作为 RM 接收 XID 注册分支事务
+# 数据源代理默认开启，undo_log 表在 cloud_product 库
+seata:
+  tx-service-group: lab_tx_group
+  service:
+    vgroup-mapping:
+      lab_tx_group: default
+    grouplist:
+      default: localhost:8091
+
 
 server:
   port: 8081
