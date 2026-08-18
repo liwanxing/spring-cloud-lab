@@ -12,8 +12,8 @@
 - **支付宝沙箱**（alipay-sdk-java：电脑网站支付 + 异步回调 + 轮询查单双保险）
 - **XXL-Job** 2.4.1（订单超时关单）
 - **Seata** 2.0.0（AT 分布式事务：下单跨库扣库存，全局提交/回滚实战验证）
-- **RocketMQ** 5.3.1（延迟消息关单，XXL-Job 扫表退为兑底）
-- **Sentinel** 1.8.6（QPS 限流 + Feign 熔断降级，限流 429 与降级兑底实战验证；规则 Nacos 持久化，改规则秒级生效）
+- **RocketMQ** 5.3.1（延迟消息关单，XXL-Job 扫表退为兜底）
+- **Sentinel** 1.8.6（QPS 限流 + Feign 熔断降级，限流 429 与降级兜底实战验证；规则 Nacos 持久化，改规则秒级生效）
 - 前端：**Vue 3 + TypeScript + Vite + Pinia**
 - **Docker Compose** 基础设施编排
 
@@ -54,7 +54,7 @@
 
 > xxl_job 库不在 init.sql 内：首次启动前需以 root 手动导入 `docker/tables_xxl_job.sql`。
 >
-> Sentinel 规则编辑入口二选一：dashboard（8858）有图形化表单但不持久（写客户端内存，重启即丢）；Nacos（8848）持久化正本但只有 JSON 文本编辑（无 Sentinel 表单，往 dataId 对应配置的数组里加对象）。日常改规则走 Nacos，发布秒生效。
+> Sentinel 规则编辑入口二选一：dashboard（8858）有图形化表单但不持久（写客户端内存，重启即丢）；Nacos（8848）持久化正本但只有 JSON 文本编辑。嫌 Nacos 手改 JSON 麻烦的常见做法：把规则写在 `docker/push_sentinel_rules.ps1` 里跑一遍，由脚本推到 Nacos（发布即生效）；也有些公司魔改 dashboard 源码让其直写 Nacos，本仓库不引入。
 
 ## 数据库账号
 
@@ -99,7 +99,7 @@ npm run dev
 
 ## 核心业务链路
 
-登录（Sa-Token）→ 商品 → 购物车 → 下单（Feign 扣库存 + 发 RocketMQ 延迟关单消息）→ 支付宝沙箱支付（回调 + 轮询双保险）→ 超时关单（MQ 延迟消息到点为主、XXL-Job 扫表兑底；渠道关单 + 库存回补）
+登录（Sa-Token）→ 商品 → 购物车 → 下单（Feign 扣库存 + 发 RocketMQ 延迟关单消息）→ 支付宝沙箱支付（回调 + 轮询双保险）→ 超时关单（MQ 延迟消息到点为主、XXL-Job 扫表兜底；渠道关单 + 库存回补）
 
 > 三库拆分后，跨服务一致性由 Seata AT 保证（undo_log 三库各一张；下单链路已实战验证全局回滚）。
 
@@ -109,5 +109,5 @@ npm run dev
 2. ~~模块拆分：用户 / 商品 / 订单 / 网关 / 前端~~ ✅
 3. ~~进阶组件：Nacos、Gateway、Sa-Token、支付宝沙箱、XXL-Job 超时关单~~ ✅
 4. ~~Seata 分布式事务：下单链路 @GlobalTransactional + undo_log 反向补偿~~ ✅
-5. ~~RocketMQ 延迟消息关单（XXL-Job 退为兑底）~~ ✅
-6. ~~Sentinel 限流熔断（QPS 限流 + Feign 降级兑底 + 规则 Nacos 持久化）~~ ✅
+5. ~~RocketMQ 延迟消息关单（XXL-Job 退为兜底）~~ ✅
+6. ~~Sentinel 限流熔断（QPS 限流 + Feign 降级兜底 + 规则 Nacos 持久化）~~ ✅

@@ -2,6 +2,7 @@ package com.liwx.laborder.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.liwx.labcommon.common.Assert;
+import com.liwx.labcommon.exception.BusinessException;
 import com.liwx.laborder.dto.*;
 import com.liwx.laborder.entity.Cart;
 import com.liwx.laborder.feign.ProductFeignClient;
@@ -23,6 +24,10 @@ public class CartServiceImpl implements CartService {
     @Override
     public void addToCart(Long userId, CartAddDTO dto) {
         var res = productFeignClient.getProduct(dto.getProductId());
+        // 降级 503（lab-product 不可用）：独立异常透传 503 语义，与"商品真不存在"区分
+        if (res.getCode() == 503) {
+            throw new BusinessException(503, res.getMessage());
+        }
         Assert.isTrue(res.getCode() == 200, "商品不存在");
         @SuppressWarnings("unchecked")
         Map<String, Object> product = (Map<String, Object>) res.getData();

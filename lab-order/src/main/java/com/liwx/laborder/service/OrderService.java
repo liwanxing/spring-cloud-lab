@@ -15,6 +15,6 @@ public interface OrderService {
     /** 延迟消息到点关单检查：仍为 PENDING 才执行关闭，返回是否实际关闭（由 MQ 消费者触发） */
     boolean closeOrderIfPending(Long orderId);
 
-    /** 超时关单兑底扫表：MQ 延迟消息为主、此为兑底（消息丢失/发送失败时扫表补网），由 XXL-Job 定时触发 */
+    /** 超时关单兜底扫表：MQ 延迟消息为主、此为兜底（消息丢失/发送失败时扫表补网），由 XXL-Job 定时触发 */
     int closeTimeoutOrders(int timeoutMinutes);
 }

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { login } from '@/api/auth'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const loading = ref(false)
 
@@ -24,7 +25,8 @@ async function handleLogin() {
     const res: any = await login(form)
     userStore.setToken(res.data)
     ElMessage.success('登录成功')
-    router.push('/')
+    // 401 被踢时携带的 redirect 在这里接住，登录后回原页面
+    router.push((route.query.redirect as string) || '/')
   } catch (err: any) {
     ElMessage.error(err.message || '登录失败')
   } finally {

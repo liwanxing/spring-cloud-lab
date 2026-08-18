@@ -3,6 +3,7 @@ package com.liwx.laborder.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.liwx.labcommon.common.Assert;
+import com.liwx.labcommon.exception.BusinessException;
 import com.liwx.labcommon.common.PageResult;
 import com.liwx.laborder.dto.*;
 import com.liwx.laborder.entity.Order;
@@ -97,9 +98,11 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (OrderItemCreateDTO itemDTO : items) {
             var productRes = productFeignClient.getProduct(itemDTO.getProductId());
-            // 503 = Sentinel 降级（lab-product 不可用/熔断）：只能透传 fallback 的"服务繁忙"提示；
-            Assert.isTrue(productRes.getCode() == 200,
-                    productRes.getCode() == 503 ? productRes.getMessage() : "商品不存在");
+            // 503 = Sentinel 降级（lab-product 不可用/熔断）：抛 503 业务异常，HTTP 状态同步透传，与"商品真不存在"区分
+            if (productRes.getCode() == 503) {
+                throw new BusinessException(503, productRes.getMessage());
+            }
+            Assert.isTrue(productRes.getCode() == 200, "商品不存在");
             @SuppressWarnings("unchecked")
             Map<String, Object> product = (Map<String, Object>) productRes.getData();
 
@@ -129,23 +132,24 @@ public class OrderServiceImpl implements OrderService {
         // 3. 扣库存 + 创建订单明细
         for (OrderItem item : orderItems) {
             var deductRes = productFeignClient.deductStock(item.getProductId(), item.getQuantity());
-            // 同上：降级 503 时透传 fallback 提示，避免误报"库存不足"
-            Assert.isTrue(deductRes.getCode() == 200,
-                    deductRes.getCode() == 503 ? deductRes.getMessage()
-                            : "「" + item.getProductName() + "」库存不足");
+            // 同上：降级 503 抛独立异常透传 503 语义，避免误报"库存不足"
+            if (deductRes.getCode() == 503) {
+                throw new BusinessException(503, deductRes.getMessage());
+            }
+            Assert.isTrue(deductRes.getCode() == 200, "「" + item.getProductName() + "」库存不足");
             item.setOrderId(order.getId());
             orderItemMapper.insert(item);
         }
 
         // 4. 发延迟关单消息：到点后消费者检查该单，仍 PENDING 才关（双入口共用内核，天然全覆盖）
         // 注：消息在全局事务内先飞出，若全局回滚则订单不存在，消费者空跳忽略；
-        // 发送失败仅记日志不影响下单成功 —— 关单另有 XXL-Job 扫表兑底
+        // 发送失败仅记日志不影响下单成功 —— 关单另有 XXL-Job 扫表兜底
         try {
             rocketMQTemplate.syncSend(MqTopics.ORDER_CLOSE,
                     MessageBuilder.withPayload(String.valueOf(order.getId())).build(),
                     3000, closeDelayLevel);
         } catch (Exception e) {
-            log.error("[延迟关单] 订单{} 消息发送失败，等待扫表兑底", order.getId(), e);
+            log.error("[延迟关单] 订单{} 消息发送失败，等待扫表兜底", order.getId(), e);
         }
 
         return toVO(order, orderItems);
@@ -210,7 +214,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 超时关单兑底扫表：正常路径由 MQ 延迟消息到点关单，本任务兑住消息丢失/发送失败的单。
+     * 超时关单兜底扫表：正常路径由 MQ 延迟消息到点关单，本任务兜住消息丢失/发送失败的单。
      * 扫描超时未支付订单，逐笔处理（渠道确认 -> 条件取消 -> 回补库存），
      * 单笔失败不影响其余订单，渠道侧异常等下一轮任务重试。
      */
