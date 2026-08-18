@@ -69,6 +69,8 @@ public class OrderServiceImpl implements OrderService {
     @GlobalTransactional(rollbackFor = Exception.class)
     @Transactional
     public OrderVO createOrderFromCart(Long userId) {
+        // 购物车页面为全量结算设计：无商品勾选功能，一次结算全部商品并整单清空购物车
+        // （不想要的商品需先在购物车页面上删除），故此处直接查全量，不接收选中项参数
         List<Cart> cartItems = cartMapper.selectList(
                 new LambdaQueryWrapper<Cart>().eq(Cart::getUserId, userId));
         Assert.isTrue(!cartItems.isEmpty(), "购物车为空");
@@ -89,12 +91,13 @@ public class OrderServiceImpl implements OrderService {
      * 立即购买与购物车结算共用此逻辑，天然支持一单多商品
      */
     private OrderVO doCreateOrder(Long userId, List<OrderItemCreateDTO> items) {
-        // 1. 查询全部商品并计算金额（先整体校验，无任何副作用）
+        // 1. 查询全部商品并计算金额（先整体校验，无任何副作用）；
+        // 前端展示的价格不可信（可被篡改），金额一律由服务端实时查询商品现价计算，
         List<OrderItem> orderItems = new ArrayList<>(items.size());
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (OrderItemCreateDTO itemDTO : items) {
             var productRes = productFeignClient.getProduct(itemDTO.getProductId());
-            // 503 = Feign 降级（lab-product 不可用/熔断），透传 fallback 提示，与"商品真不存在"区分开
+            // 503 = Sentinel 降级（lab-product 不可用/熔断）：只能透传 fallback 的"服务繁忙"提示；
             Assert.isTrue(productRes.getCode() == 200,
                     productRes.getCode() == 503 ? productRes.getMessage() : "商品不存在");
             @SuppressWarnings("unchecked")
