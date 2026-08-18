@@ -48,7 +48,8 @@ payment:
   channel: alipay
   alipay:
     gateway-url: https://openapi-sandbox.dl.alipaydev.com/gateway.do
-    notify-url: ""
+    # 异步回调公网地址（natapp 免费隧道，重启客户端域名会变，变了需同步更新）
+    notify-url: http://d3aa5588.natappfree.cc/api/payments/notify
     return-url: http://localhost:5174/orders
     app-id: ${ALIPAY_APP_ID:}
     merchant-private-key: ${ALIPAY_MERCHANT_PRIVATE_KEY:}
