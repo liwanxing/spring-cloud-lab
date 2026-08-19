@@ -169,6 +169,35 @@ services:
     depends_on:
       - elasticsearch
 
+  # SkyWalking OAP（D阶段）：链路追踪后端 —— 收 agent 上报的 trace 数据、聚合拓扑/指标
+  # H2 内存存储（零额外依赖，重启丢历史 —— 实验可接受，生产换 ES/MySQL/BanyanDB）
+  # 11800 gRPC：宿主 IDEA 里的 java-agent 上报入口；12800 HTTP：UI 查询用；堆压到 512m（默认 1g）
+  # 探活：curl http://localhost:12800/healthcheck -m 2
+  skywalking-oap:
+    image: apache/skywalking-oap-server:9.7.0
+    container_name: cloud-skywalking-oap
+    restart: always
+    ports:
+      - "11800:11800"
+      - "12800:12800"
+    environment:
+      TZ: Asia/Shanghai
+      SW_STORAGE: h2
+      SW_JVM_FLAGS: "-Xms512m -Xmx512m"
+
+  # SkyWalking UI（D阶段）：链路可视化控制台 http://localhost:8090，拓扑图/调用链/JVM 指标
+  skywalking-ui:
+    image: apache/skywalking-ui:9.7.0
+    container_name: cloud-skywalking-ui
+    restart: always
+    ports:
+      - "8090:8080"
+    environment:
+      TZ: Asia/Shanghai
+      SW_OAP_ADDRESS: http://skywalking-oap:12800
+    depends_on:
+      - skywalking-oap
+
 volumes:
   mysql_data:
   xxljob_logs:
