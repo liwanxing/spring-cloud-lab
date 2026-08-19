@@ -32,6 +32,7 @@
         <sa-token.version>1.38.0</sa-token.version>
         <alipay-sdk.version>4.40.961.ALL</alipay-sdk.version>
         <xxl-job.version>2.4.1</xxl-job.version>
+        <logstash-logback-encoder.version>7.4</logstash-logback-encoder.version>
         <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
         <!-- SCA 2023.0.1.0 把 rocketmq-client/acl 管到 5.1.4，而 rocketmq-spring 2.3.2 需要 5.3.1
              （其容器代码调用 client 5.2+ 的 setNamespaceV2，5.1.4 启动即 NoSuchMethodError），故显式钉回 -->
@@ -71,6 +72,12 @@
                 <groupId>com.xuxueli</groupId>
                 <artifactId>xxl-job-core</artifactId>
                 <version>${xxl-job.version}</version>
+            </dependency>
+            <!-- 日志 JSON 编码器（ELK 阶段2）：文件日志由 pattern 换 JSON 行；Boot 3.2/logback 1.4 对应 7.4（8.x 面向 1.5） -->
+            <dependency>
+                <groupId>net.logstash.logback</groupId>
+                <artifactId>logstash-logback-encoder</artifactId>
+                <version>${logstash-logback-encoder.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.alibaba.cloud</groupId>

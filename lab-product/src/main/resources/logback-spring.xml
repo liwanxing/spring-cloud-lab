@@ -21,9 +21,11 @@
             <maxHistory>7</maxHistory>
             <totalSizeCap>1GB</totalSizeCap>
         </rollingPolicy>
-        <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-            <charset>UTF-8</charset>
+        <!-- 阶段2：文件输出 JSON 化 —— 每行一个 JSON 对象（@timestamp/message/level/logger_name/thread_name），
+             customFields 附带服务名；后续 Logstash/Kibana 按字段过滤检索全靠它。
+             控制台保持人类可读 pattern：机器读文件、人看控制台 -->
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"service":"lab-product"}</customFields>
         </encoder>
     </appender>
 
