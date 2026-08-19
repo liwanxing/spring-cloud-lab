@@ -31,7 +31,10 @@ request.interceptors.response.use(
       if (res.code === 401) {
         kickToLogin()
       }
-      return Promise.reject(new Error(res.message || '请求失败'))
+      // code 挂到 Error 上：调用方（如 LayoutView）据此区分 401 被踢与其他失败，避免误导性弹窗
+      const err = new Error(res.message || '请求失败')
+      ;(err as any).code = res.code
+      return Promise.reject(err)
     }
     return res
   },
@@ -41,7 +44,9 @@ request.interceptors.response.use(
     }
     // 提取后端统一 Result 的 message（限流 429 / 业务错误 400 / 服务不可用 503），没有才退回 axios 默认文案
     const msg = error.response?.data?.message
-    return Promise.reject(new Error(msg || error.message || '请求失败'))
+    const err = new Error(msg || error.message || '请求失败')
+    ;(err as any).code = error.response?.status
+    return Promise.reject(err)
   }
 )
 

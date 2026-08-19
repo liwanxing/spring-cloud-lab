@@ -3,6 +3,7 @@ package com.liwx.laborder.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.liwx.labcommon.common.Assert;
+import com.liwx.labcommon.trace.TraceIdFilter;
 import com.liwx.laborder.dto.PaymentVO;
 import com.liwx.laborder.entity.Order;
 import com.liwx.laborder.entity.Payment;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.MDC;
 import java.util.Map;
 import java.util.UUID;
 
@@ -33,6 +35,9 @@ public class MockPaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentVO createPayment(Long userId, Long orderId) {
+        // 阶段6：支付是独立 HTTP 请求（与下单不同 traceId），埋 orderId 打通同一笔订单的日志线
+        // （HTTP 线程由 TraceIdFilter 收尾统一 clear）
+        MDC.put(TraceIdFilter.MDC_ORDER_ID, String.valueOf(orderId));
         Order order = orderMapper.selectById(orderId);
         Assert.notNull(order, "订单不存在");
         Assert.isTrue(order.getUserId().equals(userId), "无权操作");

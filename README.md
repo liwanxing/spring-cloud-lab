@@ -14,6 +14,7 @@
 - **Seata** 2.0.0（AT 分布式事务：下单跨库扣库存，全局提交/回滚实战验证）
 - **RocketMQ** 5.3.1（延迟消息关单，XXL-Job 扫表退为兜底）
 - **Sentinel** 1.8.6（QPS 限流 + Feign 熔断降级，限流 429 与降级兜底实战验证；规则 Nacos 持久化，改规则秒级生效）
+- **ELK** 8.13.4（可观测性：Logback 落盘 + JSON 化 → Logstash 搬运 → ES 存储 → Kibana 检索；MDC 埋 traceId/orderId，traceId 跨网关/Feign/MQ 全链路串线）
 - 前端：**Vue 3 + TypeScript + Vite + Pinia**
 - **Docker Compose** 基础设施编排
 
@@ -51,6 +52,11 @@
 | cloud-rmq-broker | 10913/10915/10916 | RocketMQ Broker（brokerIP1 通告 127.0.0.1，详见 rocketmq/broker.conf 注释） |
 | cloud-rmq-dashboard | 8182 | RocketMQ 控制台（8180/8181 已被占用） |
 | cloud-sentinel-dashboard | 8858 | Sentinel 观察窗（sentinel/sentinel；规则正本在 Nacos SENTINEL_GROUP，控制台内改动重启即丢，改规则去 Nacos） |
+| cloud-elasticsearch | 9200 | 日志存储与检索（单机模式，xpack 认证关闭仅实验用） |
+| cloud-logstash | - | 日志搬运（tail 项目根 logs/*/app.log 喂 ES 日索引 app-logs-*，不占端口） |
+| cloud-kibana | 5601 | 日志检索界面（Discover 搜 traceId/orderId/service/level；Dev Tools 可玩 DSL） |
+
+> 日志链路：各服务 logback-spring.xml 落盘 JSON 行（logs/<服务名>/app.log，LogstashEncoder 自带 service 字段 + MDC 顶层字段）→ Logstash 秒级搬运 → ES 近实时可搜（写入到可搜约 1~2 秒，NRT）。排查一笔订单：Kibana 搜 orderId；排查一次请求：搜 traceId（网关发号，随 Feign/MQ 传播）；用户报障可看响应头 X-Trace-Id。
 
 > xxl_job 库不在 init.sql 内：首次启动前需以 root 手动导入 `docker/tables_xxl_job.sql`。
 >
@@ -113,3 +119,4 @@ npm run dev
 4. ~~Seata 分布式事务：下单链路 @GlobalTransactional + undo_log 反向补偿~~ ✅
 5. ~~RocketMQ 延迟消息关单（XXL-Job 退为兜底）~~ ✅
 6. ~~Sentinel 限流熔断（QPS 限流 + Feign 降级兜底 + 规则 Nacos 持久化）~~ ✅
+7. ~~ELK 可观测性（六阶段：落盘 → JSON 化 → ES → Logstash → Kibana → MDC traceId/orderId 全链路）~~ ✅

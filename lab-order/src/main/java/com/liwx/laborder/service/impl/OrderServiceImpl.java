@@ -18,10 +18,12 @@ import com.liwx.laborder.mapper.PaymentMapper;
 import com.liwx.laborder.mq.MqTopics;
 import com.liwx.laborder.service.OrderService;
 import com.liwx.laborder.service.PaymentService;
+import com.liwx.labcommon.trace.TraceIdFilter;
 import io.seata.spring.annotation.GlobalTransactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.messaging.support.MessageBuilder;
@@ -132,6 +134,9 @@ public class OrderServiceImpl implements OrderService {
                 .deleted(0)
                 .build();
         orderMapper.insert(order);
+        // 阶段6：订单一旦落数就有身份证了 —— 埋进 MDC，后续扣库存/发 MQ 等日志全部携带 orderId
+        // （HTTP 线程由 TraceIdFilter 收尾统一 clear，这里只管埋）
+        MDC.put(TraceIdFilter.MDC_ORDER_ID, String.valueOf(order.getId()));
 
         // 3. 扣库存 + 创建订单明细
         for (OrderItem item : orderItems) {
@@ -150,7 +155,11 @@ public class OrderServiceImpl implements OrderService {
         // 发送失败仅记日志不影响下单成功 —— 关单另有 XXL-Job 扫表兜底
         try {
             rocketMQTemplate.syncSend(MqTopics.ORDER_CLOSE,
-                    MessageBuilder.withPayload(String.valueOf(order.getId())).build(),
+                    MessageBuilder.withPayload(String.valueOf(order.getId()))
+                            // 阶段6补：traceId 随消息头跨 MQ 延续（自定义 header 会转成 RocketMQ 用户属性），
+                            // 消费侧取出放回 MDC —— 关单日志与下单日志同 traceId，同步+异步链一线串到底
+                            .setHeader(TraceIdFilter.MDC_TRACE_ID, MDC.get(TraceIdFilter.MDC_TRACE_ID))
+                            .build(),
                     3000, closeDelayLevel);
         } catch (Exception e) {
             log.error("[延迟关单] 订单{} 消息发送失败，等待扫表兜底", order.getId(), e);
@@ -235,12 +244,16 @@ public class OrderServiceImpl implements OrderService {
                 .last("LIMIT 50"));
         int closed = 0;
         for (Order order : timeoutOrders) {
+            // 阶段6：XXL-Job 线程无 HTTP 上下文，orderId 自埋自清（每笔订单的关单日志可按单检索）
+            MDC.put(TraceIdFilter.MDC_ORDER_ID, String.valueOf(order.getId()));
             try {
                 if (closeOneTimeoutOrder(order)) {
                     closed++;
                 }
             } catch (Exception e) {
                 log.error("[超时关单] 订单{} 处理异常，本轮跳过", order.getOrderNo(), e);
+            } finally {
+                MDC.remove(TraceIdFilter.MDC_ORDER_ID);
             }
         }
         return closed;
@@ -304,15 +317,21 @@ public class OrderServiceImpl implements OrderService {
                 .last("LIMIT 50"));
         int settled = 0;
         for (Order order : pending) {
-            if (orderMapper.claimStockRestore(order.getId()) == 0) {
-                continue;   // 并发已被其他线程/实例抢走
-            }
-            if (restoreStock(order.getId())) {
-                settled++;
-                log.info("[回补对账] 订单{} 悬挂账已销账，库存回补完成", order.getOrderNo());
-            } else {
-                orderMapper.releaseStockRestoreClaim(order.getId());
-                log.warn("[回补对账] 订单{} 回补仍失败，已退账等下一轮", order.getOrderNo());
+            // 阶段6：同超时关单 —— job 线程 orderId 自埋自清
+            MDC.put(TraceIdFilter.MDC_ORDER_ID, String.valueOf(order.getId()));
+            try {
+                if (orderMapper.claimStockRestore(order.getId()) == 0) {
+                    continue;   // 并发已被其他线程/实例抢走
+                }
+                if (restoreStock(order.getId())) {
+                    settled++;
+                    log.info("[回补对账] 订单{} 悬挂账已销账，库存回补完成", order.getOrderNo());
+                } else {
+                    orderMapper.releaseStockRestoreClaim(order.getId());
+                    log.warn("[回补对账] 订单{} 回补仍失败，已退账等下一轮", order.getOrderNo());
+                }
+            } finally {
+                MDC.remove(TraceIdFilter.MDC_ORDER_ID);
             }
         }
         return settled;

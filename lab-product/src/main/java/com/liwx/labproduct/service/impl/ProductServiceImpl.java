@@ -8,11 +8,13 @@ import com.liwx.labproduct.entity.Product;
 import com.liwx.labproduct.mapper.ProductMapper;
 import com.liwx.labproduct.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
+@Slf4j
 @Service @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
     private final ProductMapper productMapper;
@@ -74,7 +76,11 @@ public class ProductServiceImpl implements ProductService {
     public ProductVO deductStock(Long id, int quantity) {
         Assert.isTrue(quantity > 0, "扣减数量必须大于0");
         Assert.isTrue(productMapper.deductStock(id, quantity) > 0, "库存不足");
-        return getById(id);
+        ProductVO vo = getById(id);
+        // 阶段6：跨服务链路的另一端 —— traceId 由 Feign 请求头从 lab-order 透传过来，
+        // 这条日志在 Kibana 里与下单服务日志同 traceId，一筛即串链
+        log.info("[库存扣减] 商品{} 扣{}件 剩{}件", id, quantity, vo.getStock());
+        return vo;
     }
 
     /**
@@ -86,7 +92,10 @@ public class ProductServiceImpl implements ProductService {
     public ProductVO restoreStock(Long id, int quantity) {
         Assert.isTrue(quantity > 0, "回补数量必须大于0");
         Assert.isTrue(productMapper.restoreStock(id, quantity) > 0, "商品不存在");
-        return getById(id);
+        ProductVO vo = getById(id);
+        // 阶段6：同扣减 —— 取消/关单/对账的回补链路也可按 traceId/orderId 追溯
+        log.info("[库存回补] 商品{} 补{}件 剩{}件", id, quantity, vo.getStock());
+        return vo;
     }
 
     private ProductVO toVO(Product p) {

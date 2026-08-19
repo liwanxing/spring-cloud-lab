@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.liwx.labcommon.common.Assert;
 import com.liwx.labcommon.exception.BusinessException;
+import com.liwx.labcommon.trace.TraceIdFilter;
 import com.liwx.laborder.config.AlipayProperties;
 import com.liwx.laborder.dto.PaymentVO;
 import com.liwx.laborder.entity.Order;
@@ -25,6 +26,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.slf4j.MDC;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
@@ -48,6 +50,9 @@ public class AlipayPaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentVO createPayment(Long userId, Long orderId) {
+        // 阶段6：支付是独立 HTTP 请求（与下单不同 traceId），埋 orderId 打通同一笔订单的日志线
+        // （HTTP 线程由 TraceIdFilter 收尾统一 clear）
+        MDC.put(TraceIdFilter.MDC_ORDER_ID, String.valueOf(orderId));
         Order order = orderMapper.selectById(orderId);
         Assert.notNull(order, "订单不存在");
         Assert.isTrue(order.getUserId().equals(userId), "无权操作");
@@ -162,6 +167,9 @@ public class AlipayPaymentServiceImpl implements PaymentService {
                         outTradeNo, payment.getAmount(), notifyAmount);
                 return false;
             }
+
+            // 阶段6：回调无 HTTP 入参可埋，验签查到流水后补上 orderId（TraceIdFilter 收尾统一 clear）
+            MDC.put(TraceIdFilter.MDC_ORDER_ID, String.valueOf(payment.getOrderId()));
 
             // 4. 推进流水与订单状态（幂等）
             completePayment(payment, params.get("trade_no"));

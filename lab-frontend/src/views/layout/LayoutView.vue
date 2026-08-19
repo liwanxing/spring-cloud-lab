@@ -17,7 +17,10 @@ onMounted(async () => {
     const res: any = await getCurrentUser()
     currentUser.value = res.data
   } catch (err: any) {
-    ElMessage.error('获取用户信息失败')
+    // 401（旧 token 过期）已被拦截器踢回登录页，跳转本身就是反馈，不再弹错；其余异常才提示
+    if (err?.code !== 401) {
+      ElMessage.error('获取用户信息失败')
+    }
   }
 })
 

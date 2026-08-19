@@ -4,10 +4,11 @@
 <configuration>
     <property name="LOG_HOME" value="D:/Code/spring-cloud-lab/logs/lab-gateway"/>
 
-    <!-- 控制台：开发期照常看（IDEA 控制台） -->
+    <!-- 控制台：开发期照常看（IDEA 控制台）。阶段6：MDC 里的 traceId/orderId 直接进 pattern，
+         控制台肉眼可对号（文件侧 JSON 无需改：LogstashEncoder 默认把 MDC 输出为顶层字段） -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [trace=%X{traceId:-}] [order=%X{orderId:-}] %logger{36} - %msg%n</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
