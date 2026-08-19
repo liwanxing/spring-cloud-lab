@@ -138,6 +138,23 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
 
+  # Logstash（ELK 阶段4）：日志搬运工 —— tail 各服务 app.log（JSON 行）→ 喂 ES 的 app-logs-* 日索引
+  # pipeline 配置挂载 docker/logstash/pipeline/；256m 堆（实验流量绰绰有余，默认要 1g）
+  # 不对外暴露端口（file 输入不需要，API 9600 仅容器内用），零端口占用
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.13.4
+    container_name: cloud-logstash
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+      LS_JAVA_OPTS: "-Xms256m -Xmx256m"
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      # rw：Logstash 要在挂载根写 .sincedb 断点文件（重启续读不重复搬运）
+      - ../logs:/var/log/app/logs
+    depends_on:
+      - elasticsearch
+
 volumes:
   mysql_data:
   xxljob_logs:
