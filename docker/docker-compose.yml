@@ -122,6 +122,23 @@ services:
     environment:
       TZ: Asia/Shanghai
 
+  # Elasticsearch（ELK 阶段3）：日志的存储与检索引擎（倒排索引全文搜索，阶段5 上 Kibana 才有界面）
+  # 探活：curl http://localhost:9200；单机模式堆 512m；关闭 xpack 安全认证（实验免密，生产必开）
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: cloud-elasticsearch
+    restart: always
+    ports:
+      - "9200:9200"
+    environment:
+      TZ: Asia/Shanghai
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
 volumes:
   mysql_data:
   xxljob_logs:
+  elasticsearch_data:
