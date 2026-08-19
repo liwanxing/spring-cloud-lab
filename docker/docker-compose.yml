@@ -155,6 +155,20 @@ services:
     depends_on:
       - elasticsearch
 
+  # Kibana（ELK 阶段5）：日志可视化 —— Discover 检索/过滤/看板，http://localhost:5601
+  # 与 ES 同版；ES 关了 xpack 认证放 Kibana 免登录（实验环境，生产必开）
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: cloud-kibana
+    restart: always
+    ports:
+      - "5601:5601"
+    environment:
+      TZ: Asia/Shanghai
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
 volumes:
   mysql_data:
   xxljob_logs:
