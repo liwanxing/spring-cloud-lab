@@ -7,7 +7,7 @@
 - **Spring Boot** 3.2.5 / **Spring Cloud** 2023.0.1 / **Spring Cloud Alibaba** 2023.0.1.0
 - **Java** 21 / **MyBatis-Plus** 3.5.7 / **Lombok**
 - **Nacos** 注册中心 / **OpenFeign** 服务间调用 / **Spring Cloud Gateway** 网关
-- **Sa-Token** 1.38.0 登录认证（Redis 会话共享）
+- **Sa-Token** 1.38.0 统一认证（网关 AuthGlobalFilter 校验 token → 下发 X-User-Id，业务侧 @CurrentUserId 注入；@SaCheckRole 管接口授权）
 - **MySQL** 8.0（三库三账号）/ **Redis** 7
 - **支付宝沙箱**（alipay-sdk-java：电脑网站支付 + 异步回调 + 轮询查单双保险）
 - **XXL-Job** 2.4.1（订单超时关单）
@@ -44,7 +44,7 @@
 | 容器 | 宿主端口 | 说明 |
 |------|----------|------|
 | cloud-mall-mysql | 3307 | 三库三账号由 init.sql 自动初始化 |
-| cloud-mall-redis | 6380 | Sa-Token 会话 |
+| cloud-mall-redis | 6380 | Sa-Token 会话（lab-user 签发 / 网关校验） |
 | cloud-mall-nacos | 8848 | 注册中心（控制台 nacos/nacos） |
 | cloud-xxljob-admin | 8181 | 任务调度中心（admin/123456） |
 | cloud-seata-server | 7091 / 8091 | Seata TC（控制台 seata/seata，8091 客户端通信） |
@@ -120,3 +120,4 @@ npm run dev
 5. ~~RocketMQ 延迟消息关单（XXL-Job 退为兜底）~~ ✅
 6. ~~Sentinel 限流熔断（QPS 限流 + Feign 降级兜底 + 规则 Nacos 持久化）~~ ✅
 7. ~~ELK 可观测性（六阶段：落盘 → JSON 化 → ES → Logstash → Kibana → MDC traceId/orderId 全链路）~~ ✅
+8. ~~统一认证上移网关（AuthGlobalFilter 校验 + X-User-Id 下发 + 内部接口 403 封禁）~~ ✅

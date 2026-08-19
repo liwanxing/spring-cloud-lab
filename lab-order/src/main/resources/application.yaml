@@ -29,6 +29,21 @@ spring:
             group-id: SENTINEL_GROUP
             data-id: ${spring.application.name}-degrade-rules
             rule-type: degrade
+    # Feign 超时精细配置（C阶段）：Spring Cloud 2023 起前缀从 feign.client.config 迁到 spring.cloud.openfeign.client.config
+    # 默认值 connect 10s / read 60s 太宽：lab-product 挂时应快速失败走降级，而不是干等 10 秒拖死下单线程
+    openfeign:
+      client:
+        config:
+          default:                # 全局兑底（对以后新增的 Feign 客户端生效）
+            connect-timeout: 2000
+            read-timeout: 5000
+            logger-level: BASIC   # 每次调用一行：方法+URL+状态码+耗时，随 ELK 进 Kibana 可查跨服务调用耗时
+          lab-product:            # 下单链路专属覆盖：扣库存走 Seata 全局锁，锁竞争时偏慢，读超时放宽
+            connect-timeout: 2000
+            read-timeout: 8000
+    # 重试刻意不配：Spring Cloud OpenFeign 默认 Retryer.NEVER_RETRY 正是想要的 ——
+    # ProductFeignClient 混有 deduct/restore 非幂等写操作，自动重试可能重复扣库存；
+    # 失败兑底交给 Sentinel 熔断 + ProductFeignFallback（注：原生 OpenFeign 默认反而会重试 5 次，是 Spring Cloud 改成不重试的）
   datasource:
     # 拆库后各服务独立库+独立账号（账号=库名，最小权限）
     url: jdbc:mysql://localhost:3307/cloud_order?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
@@ -67,6 +82,11 @@ seata:
 feign:
   sentinel:
     enabled: true
+
+# Feign 调用日志开关：openfeign 的 logger-level 只决定"打多少内容"，还需对应 logger 开到 DEBUG 才真正输出
+logging:
+  level:
+    com.liwx.laborder.feign: DEBUG
 
 server:
   port: 8082
