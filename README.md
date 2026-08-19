@@ -15,6 +15,7 @@
 - **RocketMQ** 5.3.1（延迟消息关单，XXL-Job 扫表退为兜底）
 - **Sentinel** 1.8.6（QPS 限流 + Feign 熔断降级，限流 429 与降级兜底实战验证；规则 Nacos 持久化，改规则秒级生效）
 - **ELK** 8.13.4（可观测性：Logback 落盘 + JSON 化 → Logstash 搬运 → ES 存储 → Kibana 检索；MDC 埋 traceId/orderId，traceId 跨网关/Feign/MQ 全链路串线）
+- **SkyWalking** 9.7.0（链路追踪：四服务 java-agent 9.2.0 旁挂上报 OAP，UI 看拓扑/方法级瀑布/JVM 指标）
 - 前端：**Vue 3 + TypeScript + Vite + Pinia**
 - **Docker Compose** 基础设施编排
 
@@ -55,8 +56,12 @@
 | cloud-elasticsearch | 9200 | 日志存储与检索（单机模式，xpack 认证关闭仅实验用） |
 | cloud-logstash | - | 日志搬运（tail 项目根 logs/*/app.log 喂 ES 日索引 app-logs-*，不占端口） |
 | cloud-kibana | 5601 | 日志检索界面（Discover 搜 traceId/orderId/service/level；Dev Tools 可玩 DSL） |
+| cloud-skywalking-oap | 11800 / 12800 | 链路后端（11800 gRPC 收 agent 上报，12800 HTTP 供 UI 查询；H2 内存存储，重启丢历史） |
+| cloud-skywalking-ui | 8090 | 链路可视化（拓扑图 / Trace 方法级瀑布 / 服务与 JVM 指标） |
 
 > 日志链路：各服务 logback-spring.xml 落盘 JSON 行（logs/<服务名>/app.log，LogstashEncoder 自带 service 字段 + MDC 顶层字段）→ Logstash 秒级搬运 → ES 近实时可搜（写入到可搜约 1~2 秒，NRT）。排查一笔订单：Kibana 搜 orderId；排查一次请求：搜 traceId（网关发号，随 Feign/MQ 传播）；用户报障可看响应头 X-Trace-Id。
+>
+> 链路追踪：服务需旁挂 agent 才被 SkyWalking 盯上 —— IDEA 各服务 VM options 加三行（`-javaagent:D:\Code\spring-cloud-lab\skywalking\skywalking-agent\skywalking-agent.jar`、`-Dskywalking.collector.backend_service=localhost:11800`、`-Dskywalking.agent.service_name=<服务名>`），agent 包不入版本库。与 ELK 分工：Kibana 管"日志说了什么"（按 traceId/orderId 搜文案），SkyWalking 管"请求怎么走的"（拓扑 + 方法级耗时瀑布，含 SQL/连接池/MQ 消费）。两套 traceId 各自独立（agent 自发号），未打通。
 
 > xxl_job 库不在 init.sql 内：首次启动前需以 root 手动导入 `docker/tables_xxl_job.sql`。
 >
@@ -121,3 +126,5 @@ npm run dev
 6. ~~Sentinel 限流熔断（QPS 限流 + Feign 降级兜底 + 规则 Nacos 持久化）~~ ✅
 7. ~~ELK 可观测性（六阶段：落盘 → JSON 化 → ES → Logstash → Kibana → MDC traceId/orderId 全链路）~~ ✅
 8. ~~统一认证上移网关（AuthGlobalFilter 校验 + X-User-Id 下发 + 内部接口 403 封禁）~~ ✅
+9. ~~Feign 超时精细配置（全局 2s/5s，lab-product 读 8s；重试刻意关闭防重复扣库存）~~ ✅
+10. ~~SkyWalking 链路追踪（OAP+UI 容器 + agent 旁挂，拓扑/瀑布/MQ 消费 trace）~~ ✅
