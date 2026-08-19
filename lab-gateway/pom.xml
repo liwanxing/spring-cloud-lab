@@ -17,6 +17,9 @@
         <dependency><groupId>org.springframework.cloud</groupId><artifactId>spring-cloud-starter-loadbalancer</artifactId></dependency>
         <!-- 日志 JSON 编码（ELK 阶段2）：logback-spring.xml 的 LogstashEncoder 来自此依赖 -->
         <dependency><groupId>net.logstash.logback</groupId><artifactId>logstash-logback-encoder</artifactId></dependency>
+        <!-- B阶段：网关统一认证 —— reactor 版 sa-token（WebFlux）+ Redis DAO（查 lab-user 签发的会话，只校验不签发） -->
+        <dependency><groupId>cn.dev33</groupId><artifactId>sa-token-reactor-spring-boot3-starter</artifactId></dependency>
+        <dependency><groupId>cn.dev33</groupId><artifactId>sa-token-redis-jackson</artifactId></dependency>
     </dependencies>
     <build><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin></plugins></build>
 </project>

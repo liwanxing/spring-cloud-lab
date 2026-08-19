@@ -1,6 +1,6 @@
 package com.liwx.laborder.controller;
 
-import cn.dev33.satoken.stp.StpUtil;
+import com.liwx.labcommon.auth.CurrentUserId;
 import com.liwx.labcommon.common.Result;
 import com.liwx.laborder.dto.PaymentVO;
 import com.liwx.laborder.service.PaymentService;
@@ -16,14 +16,14 @@ public class PaymentController {
 
     /** 发起支付：返回支付宝收银台跳转链接（mock 渠道直接成功） */
     @PostMapping("/{orderId}")
-    public Result<PaymentVO> createPayment(@PathVariable Long orderId) {
-        return Result.success(paymentService.createPayment(StpUtil.getLoginIdAsLong(), orderId));
+    public Result<PaymentVO> createPayment(@PathVariable Long orderId, @CurrentUserId Long userId) {
+        return Result.success(paymentService.createPayment(userId, orderId));
     }
 
     /** 支付状态查询：前端轮询用，PAYING 时会主动向支付宝查单补偿 */
     @GetMapping("/status/{orderId}")
-    public Result<String> queryStatus(@PathVariable Long orderId) {
-        return Result.success(paymentService.queryStatus(StpUtil.getLoginIdAsLong(), orderId));
+    public Result<String> queryStatus(@PathVariable Long orderId, @CurrentUserId Long userId) {
+        return Result.success(paymentService.queryStatus(userId, orderId));
     }
 
     /**

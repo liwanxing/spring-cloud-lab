@@ -1,9 +1,20 @@
 server:
   port: 8088
 
+# 网关侧 sa-token：只校验不签发。token-name 必须与 lab-user 完全一致 ——
+# sa-token 的 Redis key 前缀由 tokenName 拼出（Authorization:login:token:xxx），不一致就查不到会话
+sa-token:
+  token-name: Authorization
+  timeout: 86400
+  active-timeout: 1800
+
 spring:
   application:
     name: lab-gateway
+  data:
+    redis:            # 与业务服务同一个 Redis（sa-token 会话在里）：网关校验 token → userId 映射
+      host: localhost
+      port: 6380
   cloud:
     nacos:
       discovery:
