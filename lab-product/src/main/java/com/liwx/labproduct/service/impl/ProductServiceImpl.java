@@ -72,7 +72,7 @@ public class ProductServiceImpl implements ProductService {
      * 分支事务（RM）：无需任何 Seata 注解，收到 XID 后本地提交时自动注册分支并写 undo_log。
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ProductVO deductStock(Long id, int quantity) {
         Assert.isTrue(quantity > 0, "扣减数量必须大于0");
         Assert.isTrue(productMapper.deductStock(id, quantity) > 0, "库存不足");
@@ -88,7 +88,7 @@ public class ProductServiceImpl implements ProductService {
      * 被 quantity>0 参数校验拒绝（Feign 400），改为专属接口才是正路。
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ProductVO restoreStock(Long id, int quantity) {
         Assert.isTrue(quantity > 0, "回补数量必须大于0");
         Assert.isTrue(productMapper.restoreStock(id, quantity) > 0, "商品不存在");

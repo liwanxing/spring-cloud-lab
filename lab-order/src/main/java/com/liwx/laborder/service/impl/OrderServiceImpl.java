@@ -66,7 +66,7 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     @GlobalTransactional(rollbackFor = Exception.class)
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public OrderVO createOrder(Long userId, OrderCreateDTO dto) {
         return doCreateOrder(userId, dto.getItems());
     }
@@ -74,7 +74,7 @@ public class OrderServiceImpl implements OrderService {
     /** 同 createOrder：购物车入口的全局事务边界 */
     @Override
     @GlobalTransactional(rollbackFor = Exception.class)
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public OrderVO createOrderFromCart(Long userId) {
         // 购物车页面为全量结算设计：无商品勾选功能，一次结算全部商品并整单清空购物车
         // （不想要的商品需先在购物车页面上删除），故此处直接查全量，不接收选中项参数
@@ -203,7 +203,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public OrderVO cancelOrder(Long userId, Long orderId) {
         Order order = orderMapper.selectById(orderId);
         Assert.notNull(order, "订单不存在");

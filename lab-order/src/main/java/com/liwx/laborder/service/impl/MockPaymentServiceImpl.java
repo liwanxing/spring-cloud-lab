@@ -33,7 +33,7 @@ public class MockPaymentServiceImpl implements PaymentService {
     private final OrderMapper orderMapper;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public PaymentVO createPayment(Long userId, Long orderId) {
         // 阶段6：支付是独立 HTTP 请求（与下单不同 traceId），埋 orderId 打通同一笔订单的日志线
         // （HTTP 线程由 TraceIdFilter 收尾统一 clear）

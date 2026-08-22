@@ -135,7 +135,7 @@ public class AlipayPaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public boolean handleNotify(Map<String, String> params) {
         String outTradeNo = params.get("out_trade_no");
         try {
